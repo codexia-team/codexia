@@ -1,5 +1,6 @@
 use serde_json;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_remote_ui::EmitterExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{ChildStderr, ChildStdout};
 
@@ -37,9 +38,7 @@ impl EventHandler {
                         "msg": event.msg,
                         "session_id": session_id
                     });
-                    if let Err(e) = app.emit("codex-events", &wrapped) {
-                        log::error!("Failed to emit structured event: {}", e);
-                    }
+                    emit_to_frontend(&app, "codex-events", &wrapped).await;
                 } else {
                     // If structured parsing fails, try to parse as generic JSON and emit as raw event
                     match serde_json::from_str::<serde_json::Value>(&line) {
@@ -53,9 +52,7 @@ impl EventHandler {
                                 "data": json_value
                             });
 
-                            if let Err(e) = app.emit("codex-raw-events", &raw_event) {
-                                log::error!("Failed to emit raw event: {}", e);
-                            }
+                            emit_to_frontend(&app, "codex-raw-events", &raw_event).await;
                         }
                         Err(e) => {
                             log::warn!(
@@ -71,9 +68,7 @@ impl EventHandler {
                                 "content": line
                             });
 
-                            if let Err(e) = app.emit("codex-text-output", &text_event) {
-                                log::error!("Failed to emit text event: {}", e);
-                            }
+                            emit_to_frontend(&app, "codex-text-output", &text_event).await;
                         }
                     }
                 }
@@ -126,5 +121,15 @@ impl EventHandler {
             }
             _ => None,
         }
+    }
+}
+
+async fn emit_to_frontend(app: &AppHandle, event: &str, payload: &serde_json::Value) {
+    if let Some(window) = app.get_webview_window("main") {
+        if let Err(err) = tauri_remote_ui::EmitterExt::emit(&window, event, payload.clone()).await {
+            log::error!("Failed to emit '{}' event via window: {}", event, err);
+        }
+    } else if let Err(err) = app.emit(event, payload) {
+        log::error!("Failed to emit '{}' event via app handle: {}", event, err);
     }
 }

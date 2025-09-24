@@ -1,6 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { InvokeArgs, InvokeOptions } from "@tauri-apps/api/core";
-import { listen as tauriListen } from "@tauri-apps/api/event";
 import type {
   Event as TauriEvent,
   EventCallback,
@@ -25,6 +23,26 @@ let websocketReady: Promise<void> | null = null;
 const pendingInvocations = new Map<number, PendingCall>();
 let messageCounter = 0;
 let baseHandlerBound = false;
+
+let tauriCoreModulePromise: Promise<typeof import("@tauri-apps/api/core")> | null = null;
+let tauriEventModulePromise: Promise<typeof import("@tauri-apps/api/event")> | null = null;
+
+async function loadTauriCore() {
+  if (!tauriCoreModulePromise) {
+    // Lazily import the native Tauri API so web builds do not touch window.__TAURI_INTERNALS__.
+    tauriCoreModulePromise = import("@tauri-apps/api/core");
+  }
+
+  return tauriCoreModulePromise;
+}
+
+async function loadTauriEvent() {
+  if (!tauriEventModulePromise) {
+    tauriEventModulePromise = import("@tauri-apps/api/event");
+  }
+
+  return tauriEventModulePromise;
+}
 
 function isNativeTauri(): boolean {
   if (typeof window === "undefined") {
@@ -160,6 +178,7 @@ export async function invoke<T>(
   options?: InvokeOptions,
 ): Promise<T> {
   if (isNativeTauri()) {
+    const { invoke: tauriInvoke } = await loadTauriCore();
     return tauriInvoke(cmd, args, options);
   }
 
@@ -214,6 +233,7 @@ export async function listen<T>(
   options?: EventOptions,
 ): Promise<UnlistenFn> {
   if (isNativeTauri()) {
+    const { listen: tauriListen } = await loadTauriEvent();
     return tauriListen(event, handler, options);
   }
 
