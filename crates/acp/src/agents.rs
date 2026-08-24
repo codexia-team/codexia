@@ -47,11 +47,11 @@ const fn l(command: &'static str, args: &'static [&'static str]) -> Launcher {
 
 const PRESETS: &[Preset] = &[
     Preset {
-        id: "gemini",
-        name: "Gemini CLI",
+        id: "keke",
+        name: "Keke",
         launchers: &[
-            l("gemini", &["--acp"]),
-            l("npx", &["-y", "@google/gemini-cli@latest", "--acp"]),
+            l("keke", &["agent", "stdio"]),
+            l("npx", &["-y", "@milisp/keke@latest", "agent", "stdio"]),
         ],
         env: &[],
     },
@@ -68,6 +68,15 @@ const PRESETS: &[Preset] = &[
         id: "grok",
         name: "Grok",
         launchers: &[l("grok", &["agent", "stdio"])],
+        env: &[],
+    },
+    Preset {
+        id: "gemini",
+        name: "Gemini CLI",
+        launchers: &[
+            l("gemini", &["--acp"]),
+            l("npx", &["-y", "@google/gemini-cli@latest", "--acp"]),
+        ],
         env: &[],
     },
     Preset {
