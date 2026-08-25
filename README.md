@@ -74,6 +74,7 @@ runs without installing.
 - [rtc](https://github.com/rtk-ai/rtk) - CLI proxy that reduces LLM token consumption by 60-90% on common dev commands. Single Rust binary, zero dependencies
 - [ctx](https://github.com/ctxrs/ctx) - Search the coding agent history already on your machine
 
+- [Clickyy](https://github.com/jayamitkatariya/clickyyy) - Open-source macOS menu bar AI agent: shake cursor to summon an overlay that sees your screen and can click, type, and act.
 ## Architecture at a Glance
 - Codex app-server integration
 - Claude agent rust sdk integration
