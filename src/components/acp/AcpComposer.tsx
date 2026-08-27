@@ -5,6 +5,7 @@ import { toast } from '@/components/ui/use-toast';
 import { acpCancel, acpPrompt, acpStart } from '@/services/apiAdapt/acp';
 import { useWorkspaceStore } from '@/stores';
 import { useAcpStore } from '@/stores/useAcpStore';
+import { AcpModelMenu } from './AcpModelMenu';
 import { AcpSessionControls } from './AcpSessionControls';
 import { useAcpAgents } from './useAcpAgents';
 
@@ -135,7 +136,7 @@ export function AcpComposer() {
 
       <div className="flex items-center justify-between gap-2 px-1 py-1 bg-muted/20 border-t">
         <div className="flex items-center gap-1 min-w-0">
-          <AcpSessionControls slot="mode" />
+          <AcpSessionControls />
           {connecting && (
             <span className="flex items-center gap-1 px-1 text-[10px] text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -145,7 +146,7 @@ export function AcpComposer() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <AcpSessionControls slot="model" />
+          <AcpModelMenu />
           {running ? (
             <Button
               onClick={() => connectionId && acpCancel(connectionId, sessionId)}

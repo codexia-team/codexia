@@ -15,16 +15,10 @@ import {
   acpPrompt,
   acpSetConfigOption,
   acpSetMode,
-  acpSetModel,
 } from '@/services/apiAdapt/acp';
 import { useAcpStore } from '@/stores/useAcpStore';
 
 type ControlOption = { value: string; name: string; description?: string };
-
-/** Model id and reasoning effort share one select value. */
-const EFFORT_SEPARATOR = '::';
-const key = (modelId: string, effort: string | null) =>
-  effort ? `${modelId}${EFFORT_SEPARATOR}${effort}` : modelId;
 
 function ControlSelect({
   label,
@@ -112,31 +106,23 @@ function GrokApprovalSelect({
 }
 
 /**
- * Model / mode / reasoning-effort controls for the live session.
+ * Approval-mode control for the live session, on the left of the composer
+ * toolbar. Model / effort / account now live together in {@link AcpModelMenu}
+ * on the right.
  *
- * Agents expose these three ways:
- *  1. `configOptions` — the generic mechanism, already covers mode, model and
- *     thought level, so when present we render only that (Codex adapter).
- *  2. `modes` / `models` — the older per-concern fields (Gemini, Grok).
- *  3. `models[]._meta.reasoningEfforts` — Grok's per-model effort list, folded
- *     into the model picker and sent back through `_meta.reasoningEffort` on
- *     `session/set_model`.
- *
- * Grok reports no modes at all, so its approval switch falls back to
+ * Agents expose mode two ways: `configOptions` with category `'mode'` (the
+ * generic mechanism, Codex adapter), or the older `modes` field (Gemini).
+ * Grok reports neither, so its approval switch falls back to
  * {@link GrokApprovalSelect}.
  */
-export function AcpSessionControls({ slot }: { slot: 'mode' | 'model' }) {
+export function AcpSessionControls() {
   const {
     agentId,
     connectionId,
     sessionId,
     modes,
-    models,
     configOptions,
-    reasoningEffort,
     setCurrentMode,
-    setCurrentModel,
-    setReasoningEffort,
     setConfigOptionValue,
   } = useAcpStore();
 
@@ -163,14 +149,11 @@ export function AcpSessionControls({ slot }: { slot: 'mode' | 'model' }) {
   };
 
   if (configOptions.length) {
-    // Mode sits on the left of the toolbar, model/effort on the right.
-    const slotted = configOptions.filter((o) =>
-      slot === 'mode' ? o.category === 'mode' : o.category !== 'mode'
-    );
-    if (!slotted.length) return null;
+    const modeOptions = configOptions.filter((o) => o.category === 'mode');
+    if (!modeOptions.length) return null;
     return (
       <div className="flex items-center gap-1">
-        {slotted.map((option) =>
+        {modeOptions.map((option) =>
           option.type === 'boolean' ? (
             <label
               key={option.id}
@@ -197,78 +180,27 @@ export function AcpSessionControls({ slot }: { slot: 'mode' | 'model' }) {
     );
   }
 
-  if (slot === 'mode') {
-    if (!modes?.availableModes.length) {
-      return agentId === 'grok' ? (
-        <GrokApprovalSelect key={sessionId} connectionId={connectionId} sessionId={sessionId} />
-      ) : null;
-    }
-    return (
-      <ControlSelect
-        label="Mode"
-        value={modes.currentModeId}
-        options={modes.availableModes.map((m) => ({
-          value: m.id,
-          name: m.name,
-          description: m.description,
-        }))}
-        onChange={(modeId) => {
-          const previous = modes.currentModeId;
-          setCurrentMode(modeId);
-          return apply(
-            () => setCurrentMode(previous),
-            () => acpSetMode(connectionId, sessionId, modeId)
-          );
-        }}
-      />
-    );
+  if (!modes?.availableModes.length) {
+    return agentId === 'grok' ? (
+      <GrokApprovalSelect key={sessionId} connectionId={connectionId} sessionId={sessionId} />
+    ) : null;
   }
-
-  const changeModel = (modelId: string, effort: string | null) => {
-    const previousModel = models?.currentModelId;
-    const previousEffort = reasoningEffort;
-    setCurrentModel(modelId);
-    setReasoningEffort(effort);
-    return apply(
-      () => {
-        if (previousModel) setCurrentModel(previousModel);
-        setReasoningEffort(previousEffort);
-      },
-      () => acpSetModel(connectionId, sessionId, modelId, effort)
-    );
-  };
-
-  if (!models?.availableModels.length) return null;
-
-  // Effort belongs to a model, so expand each model that offers levels into one
-  // entry per level rather than pairing the picker with a second dropdown.
-  const choices = models.availableModels.flatMap<ControlOption & { effort: string | null }>((m) => {
-    const efforts = m._meta?.reasoningEfforts ?? [];
-    if (!efforts.length) {
-      return [{ value: m.modelId, name: m.name, description: m.description, effort: null }];
-    }
-    return efforts.map((e) => ({
-      value: key(m.modelId, e.id),
-      // "High Effort" reads as noise next to a model name — the level alone says it.
-      name: `${m.name} · ${(e.label ?? e.id).replace(/\s*effort$/i, '')}`,
-      description: e.description ?? m.description,
-      effort: e.id,
-    }));
-  });
-
-  // Fall back to the model's first level when the stored effort is stale.
-  const current =
-    choices.find((c) => c.value === key(models.currentModelId, reasoningEffort)) ??
-    choices.find((c) => c.value.startsWith(models.currentModelId));
-
   return (
     <ControlSelect
-      label="Model"
-      value={current?.value ?? models.currentModelId}
-      options={choices}
-      onChange={(value) => {
-        const choice = choices.find((c) => c.value === value);
-        return changeModel(value.split(EFFORT_SEPARATOR)[0], choice?.effort ?? null);
+      label="Mode"
+      value={modes.currentModeId}
+      options={modes.availableModes.map((m) => ({
+        value: m.id,
+        name: m.name,
+        description: m.description,
+      }))}
+      onChange={(modeId) => {
+        const previous = modes.currentModeId;
+        setCurrentMode(modeId);
+        return apply(
+          () => setCurrentMode(previous),
+          () => acpSetMode(connectionId, sessionId, modeId)
+        );
       }}
     />
   );

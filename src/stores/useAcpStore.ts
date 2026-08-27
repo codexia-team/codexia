@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import type {
   AcpAuthMethod,
   AcpConfigOption,
-  AcpModeState,
   AcpModelState,
+  AcpModeState,
   AcpSessionResult,
 } from '@/services/apiAdapt/acp';
 
@@ -70,6 +70,17 @@ interface AcpStore {
   configOptions: AcpConfigOption[];
   /** Selected reasoning effort for agents that scope it to a model (Grok). */
   reasoningEffort: string | null;
+  /** Id of the auth method currently being signed in, or null when idle. */
+  authenticating: string | null;
+  /** Latest stderr/notification text seen while `authenticating`, e.g. a login link. */
+  authNotice: string | null;
+  /**
+   * Id of the `authMethods` entry the last successful `authenticate` call
+   * used. The agent reports no signed-in status back, so this is only a
+   * record of what we asked for and got no error back for — not a live read
+   * of server-side auth state.
+   */
+  selectedAuthMethod: string | null;
   /**
    * Bumped by `restart` to tell the composer this teardown was deliberate and
    * it should auto-connect again, instead of treating the agent as already
@@ -94,6 +105,10 @@ interface AcpStore {
   setConfigOptions: (options: AcpConfigOption[]) => void;
   setReasoningEffort: (effort: string | null) => void;
   setConfigOptionValue: (configId: string, value: string | boolean) => void;
+  setAuthenticating: (methodId: string | null) => void;
+  setAuthNotice: (text: string | null) => void;
+  appendAuthNotice: (text: string) => void;
+  setSelectedAuthMethod: (methodId: string | null) => void;
   setConnecting: (v: boolean) => void;
   setRunning: (v: boolean) => void;
   setPermission: (p: AcpPermissionRequest | null) => void;
@@ -134,6 +149,9 @@ const cleared = {
   models: null,
   configOptions: [],
   reasoningEffort: null,
+  authenticating: null,
+  authNotice: null,
+  selectedAuthMethod: null,
 } satisfies Partial<AcpStore>;
 
 export const useAcpStore = create<AcpStore>((set) => ({
@@ -152,6 +170,9 @@ export const useAcpStore = create<AcpStore>((set) => ({
   models: null,
   configOptions: [],
   reasoningEffort: null,
+  authenticating: null,
+  authNotice: null,
+  selectedAuthMethod: null,
   restartNonce: 0,
 
   setActive: (active) => set({ active }),
@@ -195,6 +216,11 @@ export const useAcpStore = create<AcpStore>((set) => ({
         o.id === configId ? { ...o, currentValue: value } : o
       ),
     })),
+  setAuthenticating: (authenticating) => set({ authenticating, authNotice: null }),
+  setAuthNotice: (authNotice) => set({ authNotice }),
+  appendAuthNotice: (text) =>
+    set((s) => ({ authNotice: s.authNotice ? `${s.authNotice}\n${text}` : text })),
+  setSelectedAuthMethod: (selectedAuthMethod) => set({ selectedAuthMethod }),
   setConnecting: (connecting) => set({ connecting }),
   setRunning: (running) => set({ running }),
   setPermission: (permission) => set({ permission }),

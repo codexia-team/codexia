@@ -41,6 +41,19 @@ export function useAcpEvents(connectionId: string | null) {
         return;
       }
 
+      // Some agents report login links (device-flow OAuth) on stderr or as a
+      // bare notification rather than in the `authenticate` response, which
+      // carries nothing back. Only worth surfacing while a sign-in is pending.
+      if (payload.kind === 'stderr' && store.authenticating && payload.line) {
+        store.appendAuthNotice(payload.line);
+        return;
+      }
+      if (payload.kind === 'notification' && store.authenticating) {
+        const text = JSON.stringify(payload).match(/https?:\/\/\S+/)?.[0];
+        if (text) store.appendAuthNotice(text);
+        return;
+      }
+
       if (payload.kind === 'permission') {
         const title = (payload.toolCall?.title as string) ?? 'Permission requested';
         store.setPermission({
