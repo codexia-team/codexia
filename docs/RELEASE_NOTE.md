@@ -1,8 +1,7 @@
 ## ✨ Added
 
-- Codex thread item components are localized, so their labels follow the selected language.
+- ACP model, reasoning effort, and account/auth controls moved into a new `AcpModelMenu`, and device-flow login links reported during authentication now surface in the UI.
 
-## 🐛 Fixed
+## 🔄 Changed
 
-- Diff counts stay next to the file path in file change summaries.
-- Wide agent messages now scroll horizontally instead of overflowing the layout.
+- Keke replaces Gemini as the default ACP preset, with Gemini moved to the end of the agent list.

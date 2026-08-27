@@ -5,6 +5,7 @@ rather than scanning everything.
 
 | Version | Date | Notes |
 | --- | --- | --- |
+| [0.48.2](./0.48.2.md) | 2026-08-27 | ACP model/auth controls split into AcpModelMenu, Keke as default ACP preset |
 | [0.48.1](./0.48.1.md) | 2026-08-19 | Localized codex thread items, file change and message layout fixes |
 | [0.48.0](./0.48.0.md) | 2026-08-19 | Codex saved account switcher, todos panel, update indicator highlight |
 | [0.47.1](./0.47.1.md) | 2026-08-18 | Codex permission escalation and MCP elicitation prompts, provider env vars |
