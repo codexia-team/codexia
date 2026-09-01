@@ -5,7 +5,7 @@ import 'react-markdown-editor-lite/lib/index.css';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useThemeContext } from '@/contexts/ThemeContext';
-import { readFile, writeFile } from '@/services';
+import { readTextFile, writeFile } from '@/services';
 import { useAgentSettingsStore, useWorkspaceStore } from '@/stores';
 import { getErrorMessage } from '@/utils/errorUtils';
 
@@ -65,7 +65,7 @@ export default function AgentsMdView() {
 
     (async () => {
       try {
-        const instructions = await readFile(filePath);
+        const instructions = await readTextFile(filePath);
         if (active) {
           setContent(instructions);
         }

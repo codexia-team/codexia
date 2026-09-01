@@ -71,8 +71,6 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 gix = { version = "0.80.0", features = ["blocking-network-client", "blocking-http-transport-curl"] }
 walkdir = "2.3"
 nucleo = "0.5.0"
-pdf-extract = "0.7.12"
-calamine = "0.25"
 ignore = "0.4.25"
 tokio-cron-scheduler = "0.13"
 agent-insights = { git = "https://github.com/milisp/agent-insights", default-features = false }

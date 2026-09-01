@@ -7,9 +7,7 @@ import { useThemeContext } from '@/contexts/ThemeContext';
 import { isTauri } from '@/hooks/runtime';
 import {
   canonicalizePath,
-  readFile,
-  readPdfContent,
-  readXlsxContent,
+  readTextFile,
   unwatchDirectory,
   watchDirectory,
   writeFile,
@@ -19,6 +17,8 @@ import { useTodoStore } from '@/stores/useTodoStore';
 import { getErrorMessage } from '@/utils/errorUtils';
 import { getFilename } from '@/utils/getFilename';
 import { CodeEditor } from '../editor/CodeEditor';
+import { OfficeView } from './OfficeView';
+import { OFFICE_EXTENSIONS } from './officeFileTypes';
 
 interface FileViewerProps {
   filePath: string;
@@ -45,25 +45,15 @@ export function FileViewer({ filePath }: FileViewerProps) {
   const { setInputValue } = useInputStore();
   const addTodo = useTodoStore((state) => state.addTodo);
 
+  const isOfficeFile = OFFICE_EXTENSIONS.includes(getFileExtension(filePath));
+
   const loadFile = useCallback(async () => {
+    if (isOfficeFile) return;
     setLoading(true);
     setError(null);
 
     try {
-      const extension = getFileExtension(filePath);
-      let fileContent: string;
-
-      switch (extension) {
-        case 'pdf':
-          fileContent = await readPdfContent(filePath);
-          break;
-        case 'xlsx':
-          fileContent = await readXlsxContent(filePath);
-          break;
-        default:
-          fileContent = await readFile(filePath);
-          break;
-      }
+      const fileContent = await readTextFile(filePath);
 
       setContent(fileContent);
       setCurrentContent(fileContent);
@@ -73,7 +63,7 @@ export function FileViewer({ filePath }: FileViewerProps) {
     } finally {
       setLoading(false);
     }
-  }, [filePath]);
+  }, [filePath, isOfficeFile]);
 
   // Reset content/error inline during render when filePath becomes falsy
   if (!filePath && (content !== '' || error !== null)) {
@@ -199,6 +189,10 @@ export function FileViewer({ filePath }: FileViewerProps) {
   }, [filePath, canonicalFile, content, currentContent, isTauriRuntime, loadFile]);
 
   if (!filePath) return null;
+
+  if (isOfficeFile) {
+    return <OfficeView filePath={filePath} />;
+  }
 
   return (
     <div className="flex flex-col h-full min-w-0">

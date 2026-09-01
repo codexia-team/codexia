@@ -5,8 +5,7 @@ use serde::Deserialize;
 use codexia_codex::utils::codex_home;
 use codexia_shared::fs::{
     directory_ops::{canonicalize_path, get_home_directory, read_directory, search_files, search_files_by_name},
-    file_io::{delete_file, read_file, read_text_file_lines, write_file},
-    file_parsers::{pdf::read_pdf_content, xlsx::read_xlsx_content},
+    file_io::{delete_file, read_file, read_text_file, read_text_file_lines, write_file},
     file_types::FileEntry,
 };
 use crate::types::{ErrorResponse, WebServerState};
@@ -90,10 +89,10 @@ pub(crate) async fn api_search_files_by_name(
     Ok(Json(entries))
 }
 
-pub(crate) async fn api_read_file(
+pub(crate) async fn api_read_text_file(
     Json(params): Json<FilesystemFilePathParams>,
 ) -> Result<Json<String>, ErrorResponse> {
-    let content = read_file(params.file_path)
+    let content = read_text_file(params.file_path)
         .await
         .map_err(to_error_response)?;
     Ok(Json(content))
@@ -108,19 +107,10 @@ pub(crate) async fn api_read_text_file_lines(
     Ok(Json(lines))
 }
 
-pub(crate) async fn api_read_pdf_content(
+pub(crate) async fn api_read_file(
     Json(params): Json<FilesystemFilePathParams>,
 ) -> Result<Json<String>, ErrorResponse> {
-    let content = read_pdf_content(params.file_path)
-        .await
-        .map_err(to_error_response)?;
-    Ok(Json(content))
-}
-
-pub(crate) async fn api_read_xlsx_content(
-    Json(params): Json<FilesystemFilePathParams>,
-) -> Result<Json<String>, ErrorResponse> {
-    let content = read_xlsx_content(params.file_path)
+    let content = read_file(params.file_path)
         .await
         .map_err(to_error_response)?;
     Ok(Json(content))

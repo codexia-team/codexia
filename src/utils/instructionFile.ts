@@ -1,4 +1,4 @@
-import { readFile, writeFile } from '@/services/apiAdapt';
+import { readTextFile, writeFile } from '@/services/apiAdapt';
 
 type InstructionFileOptions = {
   path: string;
@@ -25,7 +25,7 @@ export const loadInstructionFile = async (
   options: InstructionFileOptions
 ): Promise<InstructionFileResult> => {
   try {
-    const content = await readFile(options.path);
+    const content = await readTextFile(options.path);
     return { content, missing: false, created: false };
   } catch (error) {
     if (!isMissingFileError(error)) {

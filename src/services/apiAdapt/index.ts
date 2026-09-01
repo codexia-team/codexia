@@ -27,7 +27,7 @@ const SESSION_META_FILE_PATH = '~/.plux/session_meta.json';
 
 export async function readSessionMetaFile(): Promise<string> {
   if (isDesktopTauri()) {
-    return await invokeTauri<string>('read_file', { filePath: SESSION_META_FILE_PATH });
+    return await invokeTauri<string>('read_text_file', { filePath: SESSION_META_FILE_PATH });
   }
   return window.localStorage.getItem(SESSION_META_STORAGE_KEY) ?? '{}';
 }

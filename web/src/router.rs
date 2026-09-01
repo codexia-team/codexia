@@ -36,8 +36,8 @@ use super::{
         api_prevent_sleep,
         api_login_account, api_model_list, api_model_list_post, api_read_directory, api_read_file,
         api_check_app_installed, api_open_workspace_in,
-        api_read_pdf_content, api_read_text_file_lines,
-        api_read_xlsx_content, api_respond_command_execution_approval,
+        api_read_text_file, api_read_text_file_lines,
+        api_respond_command_execution_approval,
         api_respond_file_change_approval, api_respond_mcp_elicitation,
         api_respond_permissions_approval, api_respond_user_input,
         api_resume_thread,
@@ -211,9 +211,8 @@ pub fn create_router(state: WebServerState) -> Router {
         .route("/api/filesystem/search-files-by-name", post(api_search_files_by_name))
         .route("/api/filesystem/codex-home", get(api_codex_home))
         .route("/api/filesystem/read-file", post(api_read_file))
+        .route("/api/filesystem/read-text-file", post(api_read_text_file))
         .route("/api/filesystem/read-text-file-lines", post(api_read_text_file_lines))
-        .route("/api/filesystem/read-pdf", post(api_read_pdf_content))
-        .route("/api/filesystem/read-xlsx", post(api_read_xlsx_content))
         .route("/api/filesystem/write-file", post(api_write_file))
         .route("/api/filesystem/delete-file", post(api_delete_file))
         .route("/api/filesystem/watch", post(api_watch_directory))

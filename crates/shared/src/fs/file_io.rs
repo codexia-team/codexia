@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-pub async fn read_file(file_path: String) -> Result<String, String> {
+pub async fn read_text_file(file_path: String) -> Result<String, String> {
     let expanded_path = if file_path.starts_with("~/") {
         let home = dirs::home_dir().ok_or_else(|| "Cannot find home directory".to_string())?;
         home.join(&file_path[2..])
@@ -120,5 +120,33 @@ pub async fn read_text_file_lines(file_path: String) -> Result<Vec<String>, Stri
             }
         }
         Err(e) => Err(format!("Failed to open file: {}", e)),
+    }
+}
+
+/// Read a file as raw bytes and return them base64-encoded, so the frontend can
+/// parse binary formats such as PDF/XLSX itself.
+pub async fn read_file(file_path: String) -> Result<String, String> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    let expanded_path = if file_path.starts_with("~/") {
+        let home = dirs::home_dir().ok_or_else(|| "Cannot find home directory".to_string())?;
+        home.join(&file_path[2..])
+    } else {
+        Path::new(&file_path).to_path_buf()
+    };
+
+    if !expanded_path.exists() || expanded_path.is_dir() {
+        return Err("File does not exist or is a directory".to_string());
+    }
+
+    if let Ok(metadata) = fs::metadata(&expanded_path) {
+        if metadata.len() > 50 * 1024 * 1024 {
+            return Err("File is too large to read".to_string());
+        }
+    }
+
+    match fs::read(&expanded_path) {
+        Ok(bytes) => Ok(STANDARD.encode(bytes)),
+        Err(e) => Err(format!("Failed to read file: {}", e)),
     }
 }

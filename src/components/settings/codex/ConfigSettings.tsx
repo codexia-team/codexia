@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CodeEditor } from '@/features/files';
-import { getCodexHome, readFile, writeFile } from '@/services/apiAdapt';
+import { getCodexHome, readTextFile, writeFile } from '@/services/apiAdapt';
 import { getErrorMessage } from '@/utils/errorUtils';
 
 const CONFIG_FILE_NAME = 'config.toml';
@@ -26,7 +26,7 @@ export function ConfigSettings() {
         const filePath = `${normalizedHome}/${CONFIG_FILE_NAME}`;
         setConfigPath(filePath);
 
-        const fileContent = await readFile(filePath);
+        const fileContent = await readTextFile(filePath);
         if (!active) {
           return;
         }

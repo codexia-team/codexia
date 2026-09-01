@@ -39,8 +39,6 @@ reqwest = { workspace = true }
 gix = { workspace = true }
 walkdir = { workspace = true }
 nucleo = { workspace = true }
-pdf-extract = { workspace = true }
-calamine = { workspace = true }
 tokio-cron-scheduler = { workspace = true }
 agent-insights = { workspace = true }
 nosleep = { version = "0.2.1" }

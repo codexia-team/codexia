@@ -79,8 +79,6 @@ which = { version = "6.0" }
 gix = { workspace = true }
 walkdir = { workspace = true }
 agent-insights = { workspace = true }
-pdf-extract = { workspace = true }
-calamine = { workspace = true }
 notify = { workspace = true }
 notify-debouncer-full = { workspace = true }
 portable-pty = { workspace = true }

@@ -1,6 +1,5 @@
 use codexia_shared::fs::{
     directory_ops, file_io,
-    file_parsers::{pdf, xlsx},
     file_types::FileEntry,
     watcher,
 };
@@ -44,8 +43,8 @@ pub async fn canonicalize_path(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn read_file(file_path: String) -> Result<String, String> {
-    file_io::read_file(file_path).await
+pub async fn read_text_file(file_path: String) -> Result<String, String> {
+    file_io::read_text_file(file_path).await
 }
 
 #[tauri::command]
@@ -64,13 +63,8 @@ pub async fn delete_file(file_path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn read_pdf_content(file_path: String) -> Result<String, String> {
-    pdf::read_pdf_content(file_path).await
-}
-
-#[tauri::command]
-pub async fn read_xlsx_content(file_path: String) -> Result<String, String> {
-    xlsx::read_xlsx_content(file_path).await
+pub async fn read_file(file_path: String) -> Result<String, String> {
+    file_io::read_file(file_path).await
 }
 
 fn tauri_watch_emitter(app: AppHandle) -> Arc<dyn Fn(watcher::FsChange) + Send + Sync> {

@@ -7,7 +7,7 @@
  *   - Both are called in App.tsx AppShell
  */
 
-import { getHomeDirectory, readFile, writeFile } from '@/services/apiAdapt';
+import { getHomeDirectory, readTextFile, writeFile } from '@/services/apiAdapt';
 import { fetchRemoteSettings } from '@/services/apiAdapt/settings';
 import { useAgentSettingsStore } from '@/stores/useAgentSettingsStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
@@ -47,7 +47,7 @@ async function getFilePath(): Promise<string> {
 async function readSettingsFile(): Promise<SettingsFile | null> {
   try {
     const path = await getFilePath();
-    const raw = await readFile(path, { suppressToast: true });
+    const raw = await readTextFile(path, { suppressToast: true });
     return JSON.parse(raw) as SettingsFile;
   } catch {
     return null;

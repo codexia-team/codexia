@@ -1,10 +1,10 @@
 import { dual, dualGet, dualVoid, type TauriFileEntry } from './shared';
 
-export async function readFile(filePath: string, options?: { suppressToast?: boolean }) {
+export async function readTextFile(filePath: string, options?: { suppressToast?: boolean }) {
   return await dual<string>(
-    'read_file',
+    'read_text_file',
     { filePath },
-    '/api/filesystem/read-file',
+    '/api/filesystem/read-text-file',
     { filePath },
     options
   );
@@ -30,14 +30,9 @@ export async function writeFile(filePath: string, content: string) {
   });
 }
 
-export async function readPdfContent(filePath: string) {
-  return await dual<string>('read_pdf_content', { filePath }, '/api/filesystem/read-pdf', {
-    filePath,
-  });
-}
-
-export async function readXlsxContent(filePath: string) {
-  return await dual<string>('read_xlsx_content', { filePath }, '/api/filesystem/read-xlsx', {
+/** Read a file as raw bytes, base64-encoded (binary formats such as PDF/XLSX). */
+export async function readFile(filePath: string) {
+  return await dual<string>('read_file', { filePath }, '/api/filesystem/read-file', {
     filePath,
   });
 }

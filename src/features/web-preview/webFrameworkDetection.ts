@@ -1,4 +1,4 @@
-import { readDirectory, readFile } from '@/services';
+import { readDirectory, readTextFile } from '@/services';
 
 export interface WebFrameworkInfo {
   framework:
@@ -27,7 +27,7 @@ export async function detectWebFramework(projectPath: string): Promise<WebFramew
 
     // Read package.json to detect framework
     const packageJsonPath = `${projectPath}/package.json`;
-    const packageJsonContent = await readFile(packageJsonPath, { suppressToast: true });
+    const packageJsonContent = await readTextFile(packageJsonPath, { suppressToast: true });
     const packageJson = JSON.parse(packageJsonContent);
 
     const dependencies = {
