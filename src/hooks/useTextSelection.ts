@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export const useTextSelection = () => {
   const [selectedText, setSelectedText] = useState<string>('');
   const [selectionRange, setSelectionRange] = useState<Range | null>(null);
-  const debounceRef = useRef<number | undefined>(undefined);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const handleSelectionChange = useCallback(() => {
     // Debounce to prevent too frequent updates
