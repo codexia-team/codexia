@@ -9,6 +9,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import { init as initPptxPreviewer } from 'pptx-preview';
 import { useEffect, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import * as XLSX from 'xlsx';
@@ -46,6 +47,7 @@ export function OfficeView({ filePath }: OfficeViewProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pptxContainerRef = useRef<HTMLDivElement>(null);
   const [excelData, setExcelData] = useState<SheetData[]>([]);
   const [activeSheet, setActiveSheet] = useState(0);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
@@ -69,6 +71,9 @@ export function OfficeView({ filePath }: OfficeViewProps) {
 
       if (containerRef.current) {
         containerRef.current.innerHTML = '';
+      }
+      if (pptxContainerRef.current) {
+        pptxContainerRef.current.innerHTML = '';
       }
 
       try {
@@ -99,7 +104,14 @@ export function OfficeView({ filePath }: OfficeViewProps) {
         } else if (extension === 'pdf') {
           setPdfBlob(new Blob([data], { type: 'application/pdf' }));
         } else if (extension === 'pptx') {
-          setError('PPTX preview is currently not supported. Please open with native app.');
+          if (pptxContainerRef.current) {
+            const previewer = initPptxPreviewer(pptxContainerRef.current, {
+              width: 800,
+              height: 600,
+              mode: 'list',
+            });
+            await previewer.preview(data.buffer as ArrayBuffer);
+          }
         }
       } catch (err) {
         if (isActive) {
@@ -202,6 +214,11 @@ export function OfficeView({ filePath }: OfficeViewProps) {
         <div
           className={`${extension === 'docx' || extension === 'doc' ? 'block' : 'hidden'} docx-wrapper mx-auto min-h-full max-w-[816px] shadow-sm`}
           ref={containerRef}
+        />
+
+        <div
+          className={`${extension === 'pptx' ? 'flex' : 'hidden'} justify-center`}
+          ref={pptxContainerRef}
         />
 
         {extension === 'pdf' && pdfBlob && (
