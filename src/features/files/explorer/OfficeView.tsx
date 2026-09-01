@@ -29,6 +29,52 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 type SheetData = { name: string; data: unknown[][] };
 
+const PPTX_SLIDE_WIDTH = 960;
+const PPTX_SLIDE_HEIGHT = 540;
+const PPTX_THUMB_WIDTH = 128;
+
+function buildPptxThumbnails(mainEl: HTMLElement, thumbRail: HTMLElement | null) {
+  if (!thumbRail) return;
+  thumbRail.innerHTML = '';
+
+  const thumbScale = PPTX_THUMB_WIDTH / PPTX_SLIDE_WIDTH;
+  // Slides are nested inside a ".pptx-preview-wrapper" element, not direct children.
+  const slideEls = Array.from(mainEl.querySelectorAll<HTMLElement>('.pptx-preview-slide-wrapper'));
+
+  slideEls.forEach((slideEl, index) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className =
+      'relative block w-full shrink-0 overflow-hidden rounded border bg-white shadow-sm';
+    if (index === 0) {
+      card.classList.add('ring-2', 'ring-primary');
+    }
+    card.style.height = `${PPTX_SLIDE_HEIGHT * thumbScale}px`;
+    card.addEventListener('click', () => {
+      for (const el of Array.from(thumbRail.children)) {
+        el.classList.remove('ring-2', 'ring-primary');
+      }
+      card.classList.add('ring-2', 'ring-primary');
+      slideEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    const clone = slideEl.cloneNode(true) as HTMLElement;
+    clone.style.width = `${PPTX_SLIDE_WIDTH}px`;
+    clone.style.transform = `scale(${thumbScale})`;
+    clone.style.transformOrigin = 'top left';
+    clone.style.pointerEvents = 'none';
+    card.appendChild(clone);
+
+    const label = document.createElement('span');
+    label.className =
+      'absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] leading-tight text-white';
+    label.textContent = String(index + 1);
+    card.appendChild(label);
+
+    thumbRail.appendChild(card);
+  });
+}
+
 function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(base64);
   const bytes = new Uint8Array(new ArrayBuffer(binary.length));
@@ -47,12 +93,15 @@ export function OfficeView({ filePath }: OfficeViewProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pptxOuterRef = useRef<HTMLDivElement>(null);
   const pptxContainerRef = useRef<HTMLDivElement>(null);
+  const pptxThumbRef = useRef<HTMLDivElement>(null);
   const [excelData, setExcelData] = useState<SheetData[]>([]);
   const [activeSheet, setActiveSheet] = useState(0);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [scale, setScale] = useState(1.0);
+  const [pptxScale, setPptxScale] = useState(1);
 
   const extension = getFilename(filePath).split('.').pop()?.toLowerCase() ?? '';
 
@@ -74,6 +123,9 @@ export function OfficeView({ filePath }: OfficeViewProps) {
       }
       if (pptxContainerRef.current) {
         pptxContainerRef.current.innerHTML = '';
+      }
+      if (pptxThumbRef.current) {
+        pptxThumbRef.current.innerHTML = '';
       }
 
       try {
@@ -106,11 +158,14 @@ export function OfficeView({ filePath }: OfficeViewProps) {
         } else if (extension === 'pptx') {
           if (pptxContainerRef.current) {
             const previewer = initPptxPreviewer(pptxContainerRef.current, {
-              width: 800,
-              height: 600,
+              width: PPTX_SLIDE_WIDTH,
+              height: PPTX_SLIDE_HEIGHT,
               mode: 'list',
             });
             await previewer.preview(data.buffer as ArrayBuffer);
+            if (isActive) {
+              buildPptxThumbnails(pptxContainerRef.current, pptxThumbRef.current);
+            }
           }
         }
       } catch (err) {
@@ -130,6 +185,21 @@ export function OfficeView({ filePath }: OfficeViewProps) {
       isActive = false;
     };
   }, [filePath, extension]);
+
+  useEffect(() => {
+    if (extension !== 'pptx') return;
+    const outer = pptxOuterRef.current;
+    if (!outer) return;
+
+    const updateScale = () => {
+      setPptxScale(outer.clientWidth / PPTX_SLIDE_WIDTH);
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(outer);
+    return () => observer.disconnect();
+  }, [extension]);
 
   if (error) {
     return (
@@ -210,15 +280,30 @@ export function OfficeView({ filePath }: OfficeViewProps) {
         )}
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
+      {extension === 'pptx' && (
+        <div className="flex min-h-0 flex-1">
+          <div
+            className="flex min-h-0 w-36 shrink-0 flex-col gap-2 overflow-y-auto border-r bg-muted/20 p-2"
+            ref={pptxThumbRef}
+          />
+          <div className="min-h-0 flex-1 overflow-auto p-4">
+            <div className="w-full" ref={pptxOuterRef}>
+              <div
+                className="bg-white shadow-sm"
+                ref={pptxContainerRef}
+                // `zoom` (unlike `transform: scale`) affects layout size, so the
+                // scroll container's scrollHeight tracks the scaled content correctly.
+                style={{ width: PPTX_SLIDE_WIDTH, zoom: pptxScale || 1 }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={`flex-1 overflow-auto p-4 ${extension === 'pptx' ? 'hidden' : ''}`}>
         <div
           className={`${extension === 'docx' || extension === 'doc' ? 'block' : 'hidden'} docx-wrapper mx-auto min-h-full max-w-[816px] shadow-sm`}
           ref={containerRef}
-        />
-
-        <div
-          className={`${extension === 'pptx' ? 'flex' : 'hidden'} justify-center`}
-          ref={pptxContainerRef}
         />
 
         {extension === 'pdf' && pdfBlob && (
@@ -321,6 +406,18 @@ export function OfficeView({ filePath }: OfficeViewProps) {
         }
         [data-color-mode='dark'] .react-pdf__Page canvas {
           filter: none;
+        }
+        .pptx-preview-wrapper {
+          background: transparent !important;
+          height: auto !important;
+          overflow: visible !important;
+        }
+        .pptx-preview-slide-wrapper {
+          margin-bottom: 16px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        }
+        .pptx-preview-slide-wrapper:last-child {
+          margin-bottom: 0;
         }
       `}</style>
     </div>

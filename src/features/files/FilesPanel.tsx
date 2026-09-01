@@ -78,7 +78,7 @@ export default function FilesPanel() {
       <div className="relative flex flex-1 min-h-0 overflow-hidden w-full">
         {/* FileViewer */}
         {activeFile ? (
-          <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <Suspense fallback={null}>
               <FileViewer filePath={activeFile} />
             </Suspense>
