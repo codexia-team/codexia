@@ -72,7 +72,7 @@ runs without installing.
 
 - [keke](https://github.com/milisp/keke-agent) - Local terminal coding agent with zero-vendor lock-in. Works with subscriptions, API keys, or self-hosted models; speaks ACP for editor/client integration
 - [oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex) - Your codex is not alone. Add hooks, agent teams, HUDs, and so much more.
-- [rtc](https://github.com/rtk-ai/rtk) - CLI proxy that reduces LLM token consumption by 60-90% on common dev commands. Single Rust binary, zero dependencies
+- [rtk](https://github.com/rtk-ai/rtk) - CLI proxy that reduces LLM token consumption by 60-90% on common dev commands. Single Rust binary, zero dependencies
 - [ctx](https://github.com/ctxrs/ctx) - Search the coding agent history already on your machine
 
 ## Architecture at a Glance
