@@ -1,10 +1,10 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { Loader2, MessageCircleCode, Plus, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import type { PluginDetail } from '@/bindings/v2';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
+import { fileSrc } from '@/hooks/runtime';
 import { useExternalUrl } from '../hooks/useExternalUrl';
 import { hideBrokenImage } from './imageFallback';
 import {
@@ -34,7 +34,7 @@ function getPluginScreenshots(plugin: PluginDetail): string[] {
 
   // Prefer local screenshots, fallback to remote URLs
   if (iface.screenshots && iface.screenshots.length > 0) {
-    return iface.screenshots.map((path) => convertFileSrc(path));
+    return iface.screenshots.map((path) => fileSrc(path));
   }
   if (iface.screenshotUrls && iface.screenshotUrls.length > 0) {
     return iface.screenshotUrls;

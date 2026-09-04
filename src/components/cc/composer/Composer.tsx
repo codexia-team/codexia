@@ -1,9 +1,9 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { CircleStop, Send, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CCPermissionModeSelect } from '@/components/cc/composer';
 import { FileMentionPopover } from '@/components/common';
 import { Button } from '@/components/ui/button';
+import { fileSrc } from '@/hooks/runtime';
 import { useCCSessionManager } from '@/hooks/useCCSessionManager';
 import { ccInterrupt, ccSendMessage } from '@/services';
 import { useAgentCenterStore, useCCInputStore } from '@/stores';
@@ -179,7 +179,7 @@ export function Composer({ overrideSend, onAfterSend }: ComposerProps = {}) {
               {images.map((path, i) => (
                 <div key={path} className="relative group/img">
                   <img
-                    src={convertFileSrc(path)}
+                    src={fileSrc(path)}
                     alt=""
                     className="h-10 w-10 object-cover rounded border border-border"
                   />

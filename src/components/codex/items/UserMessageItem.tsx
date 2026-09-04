@@ -1,4 +1,3 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +7,7 @@ import { AddToTodo, CopyButton } from '@/components/common';
 import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
+import { fileSrc } from '@/hooks/runtime';
 import { useWindowFocus } from '@/hooks/useWindowFocus';
 import { codexService } from '@/services/codexService';
 import { useInputStore } from '@/stores';
@@ -28,9 +28,7 @@ export const UserMessageItem = ({
   const { t } = useTranslation('thread');
   const isWindowFocused = useWindowFocus();
   const images = content.filter((m) => m.type === 'image').map((m) => m.url);
-  const localImages = content
-    .filter((m) => m.type === 'localImage')
-    .map((m) => convertFileSrc(m.path));
+  const localImages = content.filter((m) => m.type === 'localImage').map((m) => fileSrc(m.path));
   const text = content
     .filter((m) => m.type === 'text')
     .map((m) => m.text)

@@ -1,6 +1,6 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import type { PluginDetail } from '@/bindings/v2';
 import { Badge } from '@/components/ui/badge';
+import { fileSrc } from '@/hooks/runtime';
 
 interface SkillsSectionProps {
   skills: PluginDetail['skills'];
@@ -20,7 +20,7 @@ export function SkillsSection({ skills }: SkillsSectionProps) {
             <div className="flex items-center gap-2">
               {skill.interface?.iconSmall && (
                 <img
-                  src={convertFileSrc(skill.interface.iconSmall)}
+                  src={fileSrc(skill.interface.iconSmall)}
                   alt=""
                   className="h-6 w-6 rounded object-cover"
                 />

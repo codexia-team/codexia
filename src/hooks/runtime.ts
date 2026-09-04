@@ -1,4 +1,4 @@
-import { isTauri } from '@tauri-apps/api/core';
+import { convertFileSrc, isTauri } from '@tauri-apps/api/core';
 import { platform } from '@tauri-apps/plugin-os';
 import { desktopBaseUrl, pairedDesktop } from '@/stores/usePairingStore';
 
@@ -91,3 +91,15 @@ export const isPhone = () => _platform === 'ios' || _platform === 'android';
 
 /** True only on desktop Tauri — use this to guard invokeTauri() calls. */
 export const isDesktopTauri = () => _platform !== null && !isPhone();
+
+/**
+ * URL for a local file, usable as an `<img>`/`<video>` source.
+ *
+ * The desktop build goes through Tauri's asset protocol; the web build has no
+ * Tauri runtime (calling `convertFileSrc` there throws), so it streams the file
+ * from the backend instead.
+ */
+export const fileSrc = (path: string): string => {
+  if (isTauri()) return convertFileSrc(path);
+  return buildEventUrl(`/api/filesystem/asset?path=${encodeURIComponent(path)}`);
+};

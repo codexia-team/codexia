@@ -1,4 +1,3 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { ArrowUp, Pause, Play, Square, Target, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ThreadGoal } from '@/bindings/v2';
@@ -7,6 +6,7 @@ import { useCodexStore } from '@/components/codex/stores';
 import { ContextWindowWidget } from '@/components/codex/widget';
 import { FileMentionPopover } from '@/components/common';
 import { Button } from '@/components/ui/button';
+import { fileSrc } from '@/hooks/runtime';
 import { codexService } from '@/services/codexService';
 import { useAgentCenterStore } from '@/stores';
 import { useInputStore } from '@/stores/useInputStore';
@@ -212,7 +212,7 @@ export function Composer({ overrideSend, onAfterSend }: ComposerProps) {
               {images.map((path, index) => (
                 <div key={path} className="relative group shrink-0">
                   <img
-                    src={convertFileSrc(path)}
+                    src={fileSrc(path)}
                     alt="attachment"
                     className="h-16 w-16 object-cover rounded-md border"
                   />

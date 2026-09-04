@@ -1,5 +1,11 @@
 use super::to_error_response;
-use axum::{Json, extract::State as AxumState, http::StatusCode};
+use axum::{
+    Json,
+    body::Body,
+    extract::{Query, State as AxumState},
+    http::{StatusCode, header},
+    response::Response,
+};
 use serde::Deserialize;
 
 use codexia_codex::utils::codex_home;
@@ -38,6 +44,62 @@ pub(crate) struct FilesystemSearchFilesParams {
     #[serde(default, rename = "max_results", alias = "maxResults")]
     max_results: Option<usize>,
 }
+/// Content type for the handful of asset kinds the UI renders inline.
+fn content_type_for(path: &std::path::Path) -> &'static str {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        "avif" => "image/avif",
+        "bmp" => "image/bmp",
+        "ico" => "image/x-icon",
+        "mp4" => "video/mp4",
+        "webm" => "video/webm",
+        "pdf" => "application/pdf",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Serves a local file's raw bytes so the web build can use a plain URL where
+/// the desktop build uses Tauri's `convertFileSrc` (see `fileSrc` in
+/// `src/hooks/runtime.ts`).
+pub(crate) async fn api_asset(
+    Query(params): Query<FilesystemPathParams>,
+) -> Result<Response, ErrorResponse> {
+    let expanded = expand_home(&params.path);
+
+    if !expanded.is_file() {
+        return Err(to_error_response("File does not exist".to_string()));
+    }
+
+    let bytes = tokio::fs::read(&expanded)
+        .await
+        .map_err(|e| to_error_response(format!("Failed to read file: {e}")))?;
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, content_type_for(&expanded))
+        .header(header::CACHE_CONTROL, "private, max-age=60")
+        .body(Body::from(bytes))
+        .map_err(|e| to_error_response(e.to_string()))
+}
+
+fn expand_home(path: &str) -> std::path::PathBuf {
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Some(home) = dirs::home_dir() {
+            return home.join(rest);
+        }
+    }
+    std::path::PathBuf::from(path)
+}
+
 pub(crate) async fn api_read_directory(
     Json(params): Json<FilesystemPathParams>,
 ) -> Result<Json<Vec<FileEntry>>, ErrorResponse> {

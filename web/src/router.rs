@@ -24,7 +24,7 @@ use super::{
         api_cc_send_message, api_cc_set_permission_mode, api_cc_update_settings,
         api_create_automation, api_delete_automation, api_list_automation_runs, api_list_automations, api_run_automation_now, api_set_automation_paused,
         api_update_automation,
-        api_codex_home, api_delete_file,
+        api_asset, api_codex_home, api_delete_file,
         api_get_account, api_get_agent_heatmaps, api_save_account_snapshot,
         api_list_account_snapshots, api_remove_account_snapshot, api_switch_account_snapshot, api_get_home_directory, api_get_insight_filter_options,
         api_get_insight_rankings, api_git_branch_info, api_git_checkout_branch, api_git_create_branch,
@@ -272,6 +272,7 @@ pub fn create_router(state: WebServerState) -> Router {
         .route("/api/filesystem/search-files", post(api_search_files))
         .route("/api/filesystem/search-files-by-name", post(api_search_files_by_name))
         .route("/api/filesystem/codex-home", get(api_codex_home))
+        .route("/api/filesystem/asset", get(api_asset))
         .route("/api/filesystem/read-file", post(api_read_file))
         .route("/api/filesystem/read-text-file", post(api_read_text_file))
         .route("/api/filesystem/read-text-file-lines", post(api_read_text_file_lines))

@@ -1,6 +1,6 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useState } from 'react';
 import type { PluginSummary, SkillMetadata } from '@/bindings/v2';
+import { fileSrc } from '@/hooks/runtime';
 import { pluginInstalled } from '@/services';
 import { codexService } from '@/services/codexService';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
@@ -44,7 +44,7 @@ function pluginCapabilityDescription(plugin: PluginSummary): string | null {
 function pluginIconSrc(plugin: PluginSummary): string | null {
   const local = plugin.interface?.composerIcon;
   if (local) {
-    return convertFileSrc(local);
+    return fileSrc(local);
   }
   return plugin.interface?.composerIconUrl ?? null;
 }
@@ -76,7 +76,7 @@ function skillDisplayName(skill: SkillMetadata): string {
 function skillIconSrc(skill: SkillMetadata): string | null {
   const local = skill.interface?.iconSmall;
   if (local) {
-    return convertFileSrc(local);
+    return fileSrc(local);
   }
   return skill.interface?.iconSmallUrl ?? null;
 }
