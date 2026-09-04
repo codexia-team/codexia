@@ -4,18 +4,18 @@ import type {
   McpServerOauthLoginParams,
   McpServerOauthLoginResponse,
 } from '@/bindings/v2';
-import { dual, dualVoid, type UnifiedMcpClientName, type UnifiedMcpConfig } from './shared';
+import {
+  postJson,
+  postNoContent,
+  type UnifiedMcpClientName,
+  type UnifiedMcpConfig,
+} from './shared';
 
 export async function unifiedReadMcpConfig(
   clientName: UnifiedMcpClientName,
   path?: string
 ): Promise<UnifiedMcpConfig> {
-  return await dual<UnifiedMcpConfig>(
-    'unified_read_mcp_config',
-    { clientName, path },
-    '/api/codex/mcp/read',
-    { client_name: clientName, path }
-  );
+  return await postJson<UnifiedMcpConfig>('/api/codex/mcp/read', { client_name: clientName, path });
 }
 
 export async function unifiedAddMcpServer(params: {
@@ -25,7 +25,7 @@ export async function unifiedAddMcpServer(params: {
   serverConfig: unknown;
   scope?: string;
 }) {
-  await dualVoid('unified_add_mcp_server', params, '/api/codex/mcp/add', {
+  await postNoContent('/api/codex/mcp/add', {
     client_name: params.clientName,
     path: params.path,
     server_name: params.serverName,
@@ -40,7 +40,7 @@ export async function unifiedRemoveMcpServer(params: {
   serverName: string;
   scope?: string;
 }) {
-  await dualVoid('unified_remove_mcp_server', params, '/api/codex/mcp/remove', {
+  await postNoContent('/api/codex/mcp/remove', {
     client_name: params.clientName,
     path: params.path,
     server_name: params.serverName,
@@ -53,7 +53,7 @@ export async function unifiedEnableMcpServer(params: {
   path?: string;
   serverName: string;
 }) {
-  await dualVoid('unified_enable_mcp_server', params, '/api/codex/mcp/enable', {
+  await postNoContent('/api/codex/mcp/enable', {
     client_name: params.clientName,
     path: params.path,
     server_name: params.serverName,
@@ -65,7 +65,7 @@ export async function unifiedDisableMcpServer(params: {
   path?: string;
   serverName: string;
 }) {
-  await dualVoid('unified_disable_mcp_server', params, '/api/codex/mcp/disable', {
+  await postNoContent('/api/codex/mcp/disable', {
     client_name: params.clientName,
     path: params.path,
     server_name: params.serverName,
@@ -73,19 +73,9 @@ export async function unifiedDisableMcpServer(params: {
 }
 
 export async function mcpServerOauthLogin(params: McpServerOauthLoginParams) {
-  return await dual<McpServerOauthLoginResponse>(
-    'mcp_server_oauth_login',
-    { params },
-    '/api/codex/mcp/oauth/login',
-    params
-  );
+  return await postJson<McpServerOauthLoginResponse>('/api/codex/mcp/oauth/login', params);
 }
 
 export async function listMcpServerStatus(params: ListMcpServerStatusParams) {
-  return await dual<ListMcpServerStatusResponse>(
-    'list_mcp_server_status',
-    { params },
-    '/api/codex/mcp/status/list',
-    params
-  );
+  return await postJson<ListMcpServerStatusResponse>('/api/codex/mcp/status/list', params);
 }

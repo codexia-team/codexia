@@ -1,6 +1,4 @@
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useEffect, useRef } from 'react';
-import { isDesktopTauri } from '@/hooks/runtime';
 import { unwatchDirectory, watchDirectory } from '@/services/apiAdapt/filesystem';
 
 export type FsChangeEvent = {
@@ -33,7 +31,7 @@ export function useDirWatch(
     if (!path || !enabled) return;
 
     let cancelled = false;
-    let unlisten: UnlistenFn | null = null;
+    let unlisten: (() => void) | null = null;
 
     const setup = async () => {
       try {
@@ -43,14 +41,9 @@ export function useDirWatch(
       }
       if (cancelled) return;
 
-      if (isDesktopTauri()) {
-        unlisten = await listen<FsChangeEvent>('fs_change', (event) => {
-          onChangeRef.current(event.payload);
-        });
-        return;
-      }
-
-      // Web/remote fallback: fs_change is dispatched as a DOM CustomEvent.
+      // The watcher runs in the web server on every platform, so its events
+      // arrive over SSE and are re-dispatched as a DOM CustomEvent by
+      // useSseEventBridge.
       const onWsEvent = (event: Event) => {
         const detail = (event as CustomEvent<FsChangeEvent>).detail;
         if (detail) onChangeRef.current(detail);

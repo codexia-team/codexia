@@ -52,105 +52,68 @@ import type {
   FrontendProviderModels,
   ProviderPreset,
 } from '@/components/codex/types';
-import { dual, dualGet, dualVoid, invokeTauri, isDesktopTauri, toast } from './shared';
+import { getJson, postJson, postNoContent } from './shared';
 
 export * from './mcp';
 export * from './skills';
-
-export async function initializeCodexAsync() {
-  if (isDesktopTauri()) {
-    return await invokeTauri<void>('initialize_codex_async');
-  }
-}
 
 export async function listModels() {
   const params: ModelListParams = {
     cursor: null,
     limit: 100,
   };
-  return await dual<ModelListResponse>('model_list', { params }, '/api/codex/model/list', params);
+  return await postJson<ModelListResponse>('/api/codex/model/list', params);
 }
 
 export async function threadStart(params: ThreadStartParams) {
-  return await dual<ThreadStartResponse>(
-    'start_thread',
-    { params },
-    '/api/codex/thread/start',
-    params
-  );
+  return await postJson<ThreadStartResponse>('/api/codex/thread/start', params);
 }
 
 export async function threadResume(params: ThreadResumeParams) {
-  return await dual<ThreadResumeResponse>(
-    'resume_thread',
-    { params },
-    '/api/codex/thread/resume',
-    params
-  );
+  return await postJson<ThreadResumeResponse>('/api/codex/thread/resume', params);
 }
 
 export async function threadFork(params: ThreadForkParams) {
-  return await dual<ThreadForkResponse>(
-    'fork_thread',
-    { params },
-    '/api/codex/thread/fork',
-    params
-  );
+  return await postJson<ThreadForkResponse>('/api/codex/thread/fork', params);
 }
 
 export async function threadRollback(params: ThreadRollbackParams) {
-  return await dual<ThreadRollbackResponse>(
-    'rollback_thread',
-    { params },
-    '/api/codex/thread/rollback',
-    params
-  );
+  return await postJson<ThreadRollbackResponse>('/api/codex/thread/rollback', params);
 }
 
 export async function turnStart(params: TurnStartParams) {
-  return await dual<TurnStartResponse>('turn_start', { params }, '/api/codex/turn/start', params);
+  return await postJson<TurnStartResponse>('/api/codex/turn/start', params);
 }
 
 export async function turnSteer(params: TurnSteerParams) {
-  return await dual<TurnSteerResponse>('turn_steer', { params }, '/api/codex/turn/steer', params);
+  return await postJson<TurnSteerResponse>('/api/codex/turn/steer', params);
 }
 
 export async function turnInterrupt(params: TurnInterruptParams) {
-  return await dual('turn_interrupt', { params }, '/api/codex/turn/interrupt', params);
+  return await postJson('/api/codex/turn/interrupt', params);
 }
 
 export async function listThreads(params: ThreadListParams) {
-  return await dual<ThreadListResponse>('list_threads', { params }, '/api/codex/thread/list', {
+  return await postJson<ThreadListResponse>('/api/codex/thread/list', {
     ...params,
   });
 }
 
 export async function archiveThread(threadId: ThreadId) {
-  return await dual('archive_thread', { threadId }, '/api/codex/thread/archive', { threadId });
+  return await postJson('/api/codex/thread/archive', { threadId });
 }
 
 export async function unarchiveThread(threadId: ThreadId) {
-  return await dual('unarchive_thread', { threadId }, '/api/codex/thread/unarchive', { threadId });
+  return await postJson('/api/codex/thread/unarchive', { threadId });
 }
 
 export async function deleteThread(threadId: ThreadId) {
-  return await dual('delete_thread', { threadId }, '/api/codex/thread/delete', { threadId });
+  return await postJson('/api/codex/thread/delete', { threadId });
 }
 
 export async function renameThread(threadId: ThreadId, name: string) {
   const params = { threadId, name };
-  return await dual('rename_thread', { params }, '/api/codex/thread/rename', { params });
-}
-
-export async function loginChatGpt() {
-  if (isDesktopTauri()) {
-    return await invokeTauri<LoginAccountResponse>('login_chatgpt');
-  }
-  toast({
-    title: 'loginChatGpt is only available in Tauri mode.',
-    variant: 'destructive',
-  });
-  return Promise.reject(new Error('loginChatGpt is only available in Tauri mode.'));
+  return await postJson('/api/codex/thread/rename', params);
 }
 
 export async function getAccount() {
@@ -158,21 +121,11 @@ export async function getAccount() {
 }
 
 export async function getAccountWithParams(params: GetAccountParams) {
-  return await dual<GetAccountResponse>(
-    'get_account',
-    { params },
-    '/api/codex/account/get',
-    params
-  );
+  return await postJson<GetAccountResponse>('/api/codex/account/get', params);
 }
 
 export async function loginAccount(params: LoginAccountParams) {
-  return await dual<LoginAccountResponse>(
-    'login_account',
-    { params },
-    '/api/codex/account/login',
-    params
-  );
+  return await postJson<LoginAccountResponse>('/api/codex/account/login', params);
 }
 
 export interface AccountSnapshotSummary {
@@ -187,75 +140,51 @@ export async function saveAccountSnapshot(
   email: string | null,
   planType: string | null
 ) {
-  if (!isDesktopTauri()) return;
-  return await invokeTauri<void>('save_account_snapshot', { label, email, planType });
+  await postNoContent('/api/codex/account/snapshot/save', { label, email, planType });
 }
 
 export async function listAccountSnapshots() {
-  if (!isDesktopTauri()) return [];
-  return await invokeTauri<AccountSnapshotSummary[]>('list_account_snapshots');
+  return await getJson<AccountSnapshotSummary[]>('/api/codex/account/snapshot/list');
 }
 
 export async function removeAccountSnapshot(label: string) {
-  if (!isDesktopTauri()) return;
-  return await invokeTauri<void>('remove_account_snapshot', { label });
+  await postNoContent('/api/codex/account/snapshot/remove', { label });
 }
 
 export async function switchAccountSnapshot(label: string) {
-  if (!isDesktopTauri()) {
-    return Promise.reject(new Error('switchAccountSnapshot is only available in Tauri mode.'));
-  }
-  return await invokeTauri<LoginAccountResponse>('switch_account_snapshot', { label });
+  return await postJson<LoginAccountResponse>('/api/codex/account/snapshot/switch', { label });
 }
 
 export async function startReview(params: ReviewStartParams) {
-  return await dual<ReviewStartResponse>(
-    'start_review',
-    { params },
-    '/api/codex/review/start',
-    params
-  );
+  return await postJson<ReviewStartResponse>('/api/codex/review/start', params);
 }
 
 export async function getAccountRateLimits() {
-  return await dualGet<GetAccountRateLimitsResponse>(
-    'account_rate_limits',
-    undefined,
-    '/api/codex/account/rate-limits'
-  );
+  return await getJson<GetAccountRateLimitsResponse>('/api/codex/account/rate-limits');
 }
 
 export async function respondToRequestUserInput(requestId: RequestId, response: unknown) {
-  return await dualVoid(
-    'respond_to_request_user_input',
-    { requestId, response },
-    '/api/codex/approval/user-input',
-    { request_id: requestId, response }
-  );
+  return await postNoContent('/api/codex/approval/user-input', { request_id: requestId, response });
 }
 
 export async function respondToCommandExecutionApproval(
   requestId: RequestId,
   decision: CommandExecutionApprovalDecision
 ) {
-  return await dualVoid(
-    'respond_to_command_execution_approval',
-    { requestId, decision },
-    '/api/codex/approval/command-execution',
-    { request_id: requestId, decision }
-  );
+  return await postNoContent('/api/codex/approval/command-execution', {
+    request_id: requestId,
+    decision,
+  });
 }
 
 export async function respondToFileChangeApproval(
   requestId: RequestId,
   decision: FileChangeApprovalDecision
 ) {
-  return await dualVoid(
-    'respond_to_file_change_approval',
-    { requestId, decision },
-    '/api/codex/approval/file-change',
-    { request_id: requestId, decision }
-  );
+  return await postNoContent('/api/codex/approval/file-change', {
+    request_id: requestId,
+    decision,
+  });
 }
 
 export async function respondToMcpElicitation(
@@ -264,12 +193,12 @@ export async function respondToMcpElicitation(
   content: unknown = null,
   meta: unknown = null
 ) {
-  return await dualVoid(
-    'respond_to_mcp_elicitation',
-    { requestId, action, content, meta },
-    '/api/codex/approval/mcp-elicitation',
-    { request_id: requestId, action, content, meta }
-  );
+  return await postNoContent('/api/codex/approval/mcp-elicitation', {
+    request_id: requestId,
+    action,
+    content,
+    meta,
+  });
 }
 
 export async function respondToPermissionsApproval(
@@ -278,48 +207,30 @@ export async function respondToPermissionsApproval(
   scope: PermissionGrantScope,
   strictAutoReview = false
 ) {
-  return await dualVoid(
-    'respond_to_permissions_approval',
-    { requestId, permissions, scope, strictAutoReview },
-    '/api/codex/approval/permissions',
-    {
-      request_id: requestId,
-      permissions,
-      scope,
-      strict_auto_review: strictAutoReview,
-    }
-  );
+  return await postNoContent('/api/codex/approval/permissions', {
+    request_id: requestId,
+    permissions,
+    scope,
+    strict_auto_review: strictAutoReview,
+  });
 }
 
 export async function preventSleep(conversationId?: string | null) {
-  await dualVoid(
-    'prevent_sleep',
-    { conversationId: conversationId ?? null },
-    '/api/sleep/prevent',
-    { conversation_id: conversationId ?? null }
-  );
+  await postNoContent('/api/sleep/prevent', { conversation_id: conversationId ?? null });
 }
 
 export async function allowSleep(conversationId?: string | null) {
-  await dualVoid('allow_sleep', { conversationId: conversationId ?? null }, '/api/sleep/allow', {
+  await postNoContent('/api/sleep/allow', {
     conversation_id: conversationId ?? null,
   });
 }
 
 export async function listOtherModels() {
-  return await dualGet<FrontendProviderModels[]>(
-    'list_other_models',
-    undefined,
-    '/api/codex/model/list-other'
-  );
+  return await getJson<FrontendProviderModels[]>('/api/codex/model/list-other');
 }
 
 export async function listProviderPresets() {
-  return await dualGet<ProviderPreset[]>(
-    'list_provider_presets',
-    undefined,
-    '/api/codex/provider/presets'
-  );
+  return await getJson<ProviderPreset[]>('/api/codex/provider/presets');
 }
 
 // Persists the provider into the user's codex config.toml.
@@ -328,109 +239,58 @@ export async function addModelProvider(params: {
   baseUrl: string;
   envKey: string;
 }) {
-  await dualVoid(
-    'add_model_provider',
-    { provider: params.provider, baseUrl: params.baseUrl, envKey: params.envKey },
-    '/api/codex/provider/add',
-    { provider: params.provider, base_url: params.baseUrl, env_key: params.envKey }
-  );
+  await postNoContent('/api/codex/provider/add', {
+    provider: params.provider,
+    base_url: params.baseUrl,
+    env_key: params.envKey,
+  });
 }
 
 // Providers actually present in the user's config.toml.
 export async function listConfigProviders() {
-  return await dualGet<ConfigProvider[]>(
-    'list_config_providers',
-    undefined,
-    '/api/codex/provider/list'
-  );
+  return await getJson<ConfigProvider[]>('/api/codex/provider/list');
 }
 
 export async function removeModelProvider(provider: string) {
-  await dualVoid('remove_model_provider', { provider }, '/api/codex/provider/remove', { provider });
+  await postNoContent('/api/codex/provider/remove', { provider });
 }
 
 export async function loadEnvKeys() {
-  if (isDesktopTauri()) {
-    return await invokeTauri<EnvStatusItem[]>('load_env_keys');
-  }
-  return null;
+  return await getJson<EnvStatusItem[]>('/api/codex/load_env_keys');
 }
 
 export async function setEnv(key: string, value: string) {
-  if (isDesktopTauri()) {
-    return await invokeTauri('set_env', { key, value });
-  }
-  return null;
+  await postNoContent('/api/codex/set_env', { key, value });
 }
 
 export async function threadGoalSet(params: ThreadGoalSetParams) {
-  return await dual<ThreadGoalSetResponse>(
-    'thread_goal_set',
-    { params },
-    '/api/codex/thread/goal/set',
-    params
-  );
+  return await postJson<ThreadGoalSetResponse>('/api/codex/thread/goal/set', params);
 }
 
 export async function threadGoalGet(params: ThreadGoalGetParams) {
-  return await dual<ThreadGoalGetResponse>(
-    'thread_goal_get',
-    { params },
-    '/api/codex/thread/goal/get',
-    params
-  );
+  return await postJson<ThreadGoalGetResponse>('/api/codex/thread/goal/get', params);
 }
 
 export async function threadGoalClear(params: ThreadGoalClearParams) {
-  return await dual<ThreadGoalClearResponse>(
-    'thread_goal_clear',
-    { params },
-    '/api/codex/thread/goal/clear',
-    params
-  );
+  return await postJson<ThreadGoalClearResponse>('/api/codex/thread/goal/clear', params);
 }
 
 export async function pluginList(params: PluginListParams) {
-  return await dual<PluginListResponse>(
-    'plugin_list',
-    { params },
-    '/api/codex/plugin/list',
-    params
-  );
+  return await postJson<PluginListResponse>('/api/codex/plugin/list', params);
 }
 
 export async function pluginInstalled(params: PluginInstalledParams) {
-  return await dual<PluginInstalledResponse>(
-    'plugin_installed',
-    { params },
-    '/api/codex/plugin/installed',
-    params
-  );
+  return await postJson<PluginInstalledResponse>('/api/codex/plugin/installed', params);
 }
 
 export async function pluginRead(params: PluginReadParams) {
-  return await dual<PluginReadResponse>(
-    'plugin_read',
-    { params },
-    '/api/codex/plugin/read',
-    params
-  );
+  return await postJson<PluginReadResponse>('/api/codex/plugin/read', params);
 }
 
 export async function pluginInstall(params: PluginInstallParams) {
-  return await dual<PluginInstallResponse>(
-    'plugin_install',
-    { params },
-    '/api/codex/plugin/install',
-    params
-  );
+  return await postJson<PluginInstallResponse>('/api/codex/plugin/install', params);
 }
 
 export async function pluginUninstall(params: PluginUninstallParams) {
-  return await dual<PluginUninstallResponse>(
-    'plugin_uninstall',
-    { params },
-    '/api/codex/plugin/uninstall',
-    params
-  );
+  return await postJson<PluginUninstallResponse>('/api/codex/plugin/uninstall', params);
 }

@@ -5,9 +5,11 @@ use serde::Deserialize;
 use codexia_git::{
     GitApplyWorktreeResult, GitBranchInfoResult, GitBranchListResult,
     GitCreateWorktreeResult, GitDiffStatsResult, GitFileDiffMetaResult,
-    GitFileDiffResult, GitStatusResult, git_apply_worktree_changes, git_branch_info,
+    GitFileDiffResult, GitHasWorktreeChangesResult, GitStatusResult, git_apply_worktree_changes,
+    git_branch_info,
     git_checkout_branch, git_create_branch, git_create_worktree, git_diff_stats, git_file_diff,
-    git_file_diff_meta, git_list_branches, git_remove_worktree, git_reverse_files,
+    git_file_diff_meta, git_has_worktree_changes, git_list_branches, git_remove_worktree,
+    git_reverse_files,
     git_stage_files, git_status, git_unstage_files,
 };
 use crate::types::ErrorResponse;
@@ -188,5 +190,13 @@ pub(crate) async fn api_git_push(
 ) -> Result<Json<String>, ErrorResponse> {
     let result = codexia_git::git_push(params.cwd, params.remote, params.branch)
         .map_err(to_error_response)?;
+    Ok(Json(result))
+}
+
+pub(crate) async fn api_git_has_worktree_changes(
+    Json(params): Json<GitRemoveWorktreeParams>,
+) -> Result<Json<GitHasWorktreeChangesResult>, ErrorResponse> {
+    let result =
+        git_has_worktree_changes(params.cwd, params.worktree_key).map_err(to_error_response)?;
     Ok(Json(result))
 }

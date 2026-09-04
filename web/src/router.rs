@@ -25,14 +25,23 @@ use super::{
         api_create_automation, api_delete_automation, api_list_automation_runs, api_list_automations, api_run_automation_now, api_set_automation_paused,
         api_update_automation,
         api_codex_home, api_delete_file,
-        api_get_account, api_get_agent_heatmaps, api_get_home_directory, api_get_insight_filter_options,
+        api_get_account, api_get_agent_heatmaps, api_save_account_snapshot,
+        api_list_account_snapshots, api_remove_account_snapshot, api_switch_account_snapshot, api_get_home_directory, api_get_insight_filter_options,
         api_get_insight_rankings, api_git_branch_info, api_git_checkout_branch, api_git_create_branch,
         api_git_apply_worktree_changes,
         api_git_remove_worktree,
         api_git_diff_stats, api_git_file_diff, api_git_file_diff_meta, api_git_list_branches,
         api_git_create_worktree, api_git_reverse_files, api_git_stage_files,
         api_git_status, api_git_unstage_files, api_git_commit, api_git_push,
-        api_list_threads,
+        api_git_has_worktree_changes,
+        api_list_threads, api_delete_thread, api_rename_thread, api_turn_steer,
+        api_thread_goal_set, api_thread_goal_get, api_thread_goal_clear,
+        api_thread_compact_start, api_thread_memory_mode_set, api_memory_reset,
+        api_hooks_list, api_plugin_list, api_plugin_read, api_plugin_install,
+        api_plugin_uninstall, api_plugin_installed,
+        api_external_agent_config_detect, api_external_agent_config_import,
+        api_external_agent_config_import_record_history,
+        api_external_agent_config_import_read_histories,
         api_prevent_sleep,
         api_login_account, api_model_list, api_model_list_post, api_read_directory, api_read_file,
         api_check_app_installed, api_open_workspace_in,
@@ -157,7 +166,44 @@ pub fn create_router(state: WebServerState) -> Router {
         .route("/api/codex/thread/list", post(api_list_threads))
         .route("/api/codex/thread/archive", post(api_archive_thread))
         .route("/api/codex/thread/unarchive", post(api_unarchive_thread))
+        .route("/api/codex/thread/delete", post(api_delete_thread))
+        .route("/api/codex/thread/rename", post(api_rename_thread))
+        .route("/api/codex/thread/goal/set", post(api_thread_goal_set))
+        .route("/api/codex/thread/goal/get", post(api_thread_goal_get))
+        .route("/api/codex/thread/goal/clear", post(api_thread_goal_clear))
+        .route(
+            "/api/codex/thread/compact/start",
+            post(api_thread_compact_start),
+        )
+        .route(
+            "/api/codex/thread/memory-mode/set",
+            post(api_thread_memory_mode_set),
+        )
+        .route("/api/codex/memory/reset", post(api_memory_reset))
+        .route("/api/codex/hooks/list", post(api_hooks_list))
+        .route("/api/codex/plugin/list", post(api_plugin_list))
+        .route("/api/codex/plugin/read", post(api_plugin_read))
+        .route("/api/codex/plugin/install", post(api_plugin_install))
+        .route("/api/codex/plugin/uninstall", post(api_plugin_uninstall))
+        .route("/api/codex/plugin/installed", post(api_plugin_installed))
+        .route(
+            "/api/codex/external-agent-config/detect",
+            post(api_external_agent_config_detect),
+        )
+        .route(
+            "/api/codex/external-agent-config/import",
+            post(api_external_agent_config_import),
+        )
+        .route(
+            "/api/codex/external-agent-config/import/record-history",
+            post(api_external_agent_config_import_record_history),
+        )
+        .route(
+            "/api/codex/external-agent-config/import/read-histories",
+            post(api_external_agent_config_import_read_histories),
+        )
         .route("/api/codex/turn/start", post(api_turn_start))
+        .route("/api/codex/turn/steer", post(api_turn_steer))
         .route("/api/codex/turn/interrupt", post(api_turn_interrupt))
         .route(
             "/api/codex/model/list",
@@ -176,6 +222,22 @@ pub fn create_router(state: WebServerState) -> Router {
         )
         .route("/api/codex/account/get", post(api_get_account))
         .route("/api/codex/account/login", post(api_login_account))
+        .route(
+            "/api/codex/account/snapshot/save",
+            post(api_save_account_snapshot),
+        )
+        .route(
+            "/api/codex/account/snapshot/list",
+            get(api_list_account_snapshots),
+        )
+        .route(
+            "/api/codex/account/snapshot/remove",
+            post(api_remove_account_snapshot),
+        )
+        .route(
+            "/api/codex/account/snapshot/switch",
+            post(api_switch_account_snapshot),
+        )
         .route("/api/codex/skills/list", post(api_skills_list))
         .route(
             "/api/codex/skills/config/write",
@@ -277,6 +339,10 @@ pub fn create_router(state: WebServerState) -> Router {
         .route("/api/git/reverse-files", post(api_git_reverse_files))
         .route("/api/git/commit", post(api_git_commit))
         .route("/api/git/push", post(api_git_push))
+        .route(
+            "/api/git/has-worktree-changes",
+            post(api_git_has_worktree_changes),
+        )
         .route("/api/acp/agents", get(api_acp_list_agents))
         .route("/api/acp/start", post(api_acp_start))
         .route("/api/acp/prompt", post(api_acp_prompt))
@@ -340,6 +406,40 @@ pub fn create_router(state: WebServerState) -> Router {
 #[cfg(test)]
 mod tests {
     use super::origin_is_allowed;
+    use std::collections::HashMap;
+
+    /// Axum panics at startup when the same path is registered twice, which in
+    /// the desktop app means the loopback server silently never comes up. The
+    /// table is long enough that a copy-paste duplicate is easy to miss, so
+    /// catch it here instead.
+    #[test]
+    fn every_route_path_is_registered_once() {
+        let source = include_str!("router.rs");
+        let mut counts: HashMap<&str, usize> = HashMap::new();
+        for chunk in source.split(".route(").skip(1) {
+            let Some(rest) = chunk.split_once('"') else {
+                continue;
+            };
+            let Some((path, _)) = rest.1.split_once('"') else {
+                continue;
+            };
+            if path.starts_with('/') {
+                *counts.entry(path).or_default() += 1;
+            }
+        }
+
+        // The table itself must be non-trivial, or a parsing change would make
+        // this test pass by finding nothing.
+        assert!(counts.len() > 100, "found only {} routes", counts.len());
+
+        let mut duplicates: Vec<&str> = counts
+            .iter()
+            .filter(|(_, count)| **count > 1)
+            .map(|(path, _)| *path)
+            .collect();
+        duplicates.sort_unstable();
+        assert_eq!(duplicates, Vec::<&str>::new());
+    }
 
     #[test]
     fn local_ui_origins_are_allowed() {

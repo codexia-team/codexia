@@ -9,6 +9,7 @@ use serde_json::{Value, json};
 use crate::types::{ErrorResponse, WebServerState};
 
 use codexia_codex::AppState;
+use codexia_codex::accounts;
 use codexia_cc::mcp_unified as mcp;
 
 fn require_codex(state: &WebServerState) -> Result<&AppState, ErrorResponse> {
@@ -372,6 +373,96 @@ pub(crate) async fn api_list_mcp_server_status(
     let result = require_codex(&state)?
         .codex
         .send_request("mcpServerStatus/list", params)
+        .await
+        .map_err(to_error_response)?;
+    Ok(Json(result))
+}
+
+/// Declares handlers that forward their JSON body straight to one codex
+/// app-server method.
+///
+/// These endpoints carry no logic of their own — the desktop app used to reach
+/// the same methods through one `#[tauri::command]` each, and spelling every
+/// one out as a full function here would just move that duplication.
+macro_rules! codex_passthrough {
+    ($($name:ident => $method:literal,)*) => {$(
+        pub(crate) async fn $name(
+            AxumState(state): AxumState<WebServerState>,
+            Json(params): Json<Value>,
+        ) -> Result<Json<Value>, ErrorResponse> {
+            let result = require_codex(&state)?
+                .codex
+                .send_request($method, params)
+                .await
+                .map_err(to_error_response)?;
+            Ok(Json(result))
+        }
+    )*};
+}
+
+codex_passthrough! {
+    api_delete_thread => "thread/delete",
+    api_rename_thread => "thread/name/set",
+    api_turn_steer => "turn/steer",
+    api_thread_goal_set => "thread/goal/set",
+    api_thread_goal_get => "thread/goal/get",
+    api_thread_goal_clear => "thread/goal/clear",
+    api_thread_compact_start => "thread/compact/start",
+    api_thread_memory_mode_set => "thread/memoryMode/set",
+    api_memory_reset => "memory/reset",
+    api_hooks_list => "hooks/list",
+    api_plugin_list => "plugin/list",
+    api_plugin_read => "plugin/read",
+    api_plugin_install => "plugin/install",
+    api_plugin_uninstall => "plugin/uninstall",
+    api_plugin_installed => "plugin/installed",
+    api_external_agent_config_detect => "externalAgentConfig/detect",
+    api_external_agent_config_import => "externalAgentConfig/import",
+    api_external_agent_config_import_record_history => "externalAgentConfig/import/recordHistory",
+    api_external_agent_config_import_read_histories => "externalAgentConfig/import/readHistories",
+}
+
+/// A named snapshot of `CODEX_HOME/auth.json`, so an account can be switched
+/// back to later without logging out again.
+#[derive(serde::Deserialize)]
+pub(crate) struct AccountSnapshotParams {
+    label: String,
+    #[serde(default)]
+    email: Option<String>,
+    #[serde(default, rename = "planType", alias = "plan_type")]
+    plan_type: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+pub(crate) struct AccountLabelParams {
+    label: String,
+}
+
+pub(crate) async fn api_save_account_snapshot(
+    Json(params): Json<AccountSnapshotParams>,
+) -> Result<StatusCode, ErrorResponse> {
+    accounts::save_current_account(&params.label, params.email, params.plan_type)
+        .map_err(to_error_response)?;
+    Ok(StatusCode::OK)
+}
+
+pub(crate) async fn api_list_account_snapshots()
+-> Result<Json<Vec<accounts::AccountSummary>>, ErrorResponse> {
+    Ok(Json(accounts::list_accounts().map_err(to_error_response)?))
+}
+
+pub(crate) async fn api_remove_account_snapshot(
+    Json(params): Json<AccountLabelParams>,
+) -> Result<StatusCode, ErrorResponse> {
+    accounts::remove_account(&params.label).map_err(to_error_response)?;
+    Ok(StatusCode::OK)
+}
+
+pub(crate) async fn api_switch_account_snapshot(
+    AxumState(state): AxumState<WebServerState>,
+    Json(params): Json<AccountLabelParams>,
+) -> Result<Json<Value>, ErrorResponse> {
+    let result = accounts::switch_account(&params.label, &require_codex(&state)?.codex)
         .await
         .map_err(to_error_response)?;
     Ok(Json(result))

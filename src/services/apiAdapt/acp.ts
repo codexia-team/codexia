@@ -1,4 +1,4 @@
-import { dual, dualGet, dualVoid } from './shared';
+import { getJson, postJson, postNoContent } from './shared';
 
 export type AcpAgentDef = {
   id: string;
@@ -79,16 +79,15 @@ export type AcpStartResult = {
 };
 
 export async function acpListAgents() {
-  return await dualGet<AcpAgentDef[]>('acp_list_agents', undefined, '/api/acp/agents');
+  return await getJson<AcpAgentDef[]>('/api/acp/agents');
 }
 
 export async function acpStart(agentId: string, cwd: string, custom?: AcpAgentDef) {
-  return await dual<AcpStartResult>(
-    'acp_start',
-    { agentId, cwd, custom: custom ?? null },
-    '/api/acp/start',
-    { agent_id: agentId, cwd, custom: custom ?? null }
-  );
+  return await postJson<AcpStartResult>('/api/acp/start', {
+    agent_id: agentId,
+    cwd,
+    custom: custom ?? null,
+  });
 }
 
 /**
@@ -96,35 +95,32 @@ export async function acpStart(agentId: string, cwd: string, custom?: AcpAgentDe
  * the session it targets. `null` falls back to the connection's newest session.
  */
 export async function acpPrompt(connectionId: string, sessionId: string | null, text: string) {
-  return await dual<{ stopReason?: string }>(
-    'acp_prompt',
-    { connectionId, sessionId, text },
-    '/api/acp/prompt',
-    { connection_id: connectionId, session_id: sessionId, text }
-  );
+  return await postJson<{ stopReason?: string }>('/api/acp/prompt', {
+    connection_id: connectionId,
+    session_id: sessionId,
+    text,
+  });
 }
 
 export async function acpCancel(connectionId: string, sessionId: string | null) {
-  await dualVoid('acp_cancel', { connectionId, sessionId }, '/api/acp/cancel', {
+  await postNoContent('/api/acp/cancel', {
     connection_id: connectionId,
     session_id: sessionId,
   });
 }
 
 export async function acpAuthenticate(connectionId: string, methodId: string) {
-  await dualVoid('acp_authenticate', { connectionId, methodId }, '/api/acp/authenticate', {
+  await postNoContent('/api/acp/authenticate', {
     connection_id: connectionId,
     method_id: methodId,
   });
 }
 
 export async function acpNewSession(connectionId: string, cwd: string) {
-  return await dual<AcpSessionResult>(
-    'acp_new_session',
-    { connectionId, cwd },
-    '/api/acp/new-session',
-    { connection_id: connectionId, cwd }
-  );
+  return await postJson<AcpSessionResult>('/api/acp/new-session', {
+    connection_id: connectionId,
+    cwd,
+  });
 }
 
 /** A persisted session, as listed in the sidebar. */
@@ -140,41 +136,35 @@ export type AcpSessionRecord = {
 
 /** Resume a stored session. Only works when `agentCapabilities.loadSession`. */
 export async function acpLoadSession(connectionId: string, sessionId: string, cwd: string) {
-  return await dual<AcpSessionResult>(
-    'acp_load_session',
-    { connectionId, sessionId, cwd },
-    '/api/acp/load-session',
-    { connection_id: connectionId, session_id: sessionId, cwd }
-  );
+  return await postJson<AcpSessionResult>('/api/acp/load-session', {
+    connection_id: connectionId,
+    session_id: sessionId,
+    cwd,
+  });
 }
 
 export async function acpListSessions(cwd?: string, limit?: number) {
-  return await dual<AcpSessionRecord[]>(
-    'acp_list_sessions',
-    { cwd: cwd ?? null, limit: limit ?? null },
-    '/api/acp/sessions',
-    { cwd: cwd ?? null, limit: limit ?? null }
-  );
+  return await postJson<AcpSessionRecord[]>('/api/acp/sessions', {
+    cwd: cwd ?? null,
+    limit: limit ?? null,
+  });
 }
 
 /** The stored transcript: raw `session/update` payloads in arrival order. */
 export async function acpGetSession(sessionId: string) {
-  return await dual<Array<Record<string, unknown>>>(
-    'acp_get_session',
-    { sessionId },
-    '/api/acp/session',
-    { session_id: sessionId }
-  );
+  return await postJson<Array<Record<string, unknown>>>('/api/acp/session', {
+    session_id: sessionId,
+  });
 }
 
 export async function acpDeleteSession(sessionId: string) {
-  await dualVoid('acp_delete_session', { sessionId }, '/api/acp/delete-session', {
+  await postNoContent('/api/acp/delete-session', {
     session_id: sessionId,
   });
 }
 
 export async function acpSetMode(connectionId: string, sessionId: string | null, modeId: string) {
-  await dual('acp_set_mode', { connectionId, sessionId, modeId }, '/api/acp/set-mode', {
+  await postJson('/api/acp/set-mode', {
     connection_id: connectionId,
     session_id: sessionId,
     mode_id: modeId,
@@ -187,17 +177,12 @@ export async function acpSetModel(
   modelId: string,
   reasoningEffort?: string | null
 ) {
-  await dual(
-    'acp_set_model',
-    { connectionId, sessionId, modelId, reasoningEffort: reasoningEffort ?? null },
-    '/api/acp/set-model',
-    {
-      connection_id: connectionId,
-      session_id: sessionId,
-      model_id: modelId,
-      reasoning_effort: reasoningEffort ?? null,
-    }
-  );
+  await postJson('/api/acp/set-model', {
+    connection_id: connectionId,
+    session_id: sessionId,
+    model_id: modelId,
+    reasoning_effort: reasoningEffort ?? null,
+  });
 }
 
 export async function acpSetConfigOption(
@@ -206,12 +191,12 @@ export async function acpSetConfigOption(
   configId: string,
   value: string | boolean
 ) {
-  await dual(
-    'acp_set_config_option',
-    { connectionId, sessionId, configId, value },
-    '/api/acp/set-config-option',
-    { connection_id: connectionId, session_id: sessionId, config_id: configId, value }
-  );
+  await postJson('/api/acp/set-config-option', {
+    connection_id: connectionId,
+    session_id: sessionId,
+    config_id: configId,
+    value,
+  });
 }
 
 export async function acpRespondPermission(
@@ -219,14 +204,13 @@ export async function acpRespondPermission(
   requestId: string,
   optionId: string | null
 ) {
-  await dualVoid(
-    'acp_respond_permission',
-    { connectionId, requestId, optionId },
-    '/api/acp/respond-permission',
-    { connection_id: connectionId, request_id: requestId, option_id: optionId }
-  );
+  await postNoContent('/api/acp/respond-permission', {
+    connection_id: connectionId,
+    request_id: requestId,
+    option_id: optionId,
+  });
 }
 
 export async function acpStop(connectionId: string) {
-  await dualVoid('acp_stop', { connectionId }, '/api/acp/stop', { connection_id: connectionId });
+  await postNoContent('/api/acp/stop', { connection_id: connectionId });
 }

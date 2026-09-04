@@ -6,6 +6,7 @@ import type {
   PermissionsRequest,
   RequestUserInputRequest,
 } from '@/components/codex/stores';
+import { isDesktopTauri } from '@/hooks/runtime';
 import { openEventStream } from '@/lib/eventStream';
 
 interface SseEventHandlers {
@@ -17,8 +18,12 @@ interface SseEventHandlers {
   onNotification: (payload: ServerNotification) => void;
 }
 
-// Bridges server-sent events (used on non-desktop / web builds) into the
-// same handler shape as the Tauri native event listeners.
+// Bridges server-sent events into the same handler shape as the Tauri native
+// event listeners.
+//
+// The desktop keeps its agent events on the Tauri bus, but the filesystem
+// watcher lives in the web server on every platform now, so `fs_change` only
+// ever arrives here — desktop included.
 export function useSseEventBridge({
   enabled,
   onApproval,
@@ -63,6 +68,9 @@ export function useSseEventBridge({
           window.dispatchEvent(new CustomEvent('fs_change', { detail: envelope.payload }));
           return;
         }
+        // Everything below reaches the desktop over the Tauri bus already;
+        // handling it here too would deliver it twice.
+        if (isDesktopTauri()) return;
         if (envelope.event === 'codex/approval-request') {
           handlersRef.current.onApproval(envelope.payload as ApprovalRequest);
           return;

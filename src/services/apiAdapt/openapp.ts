@@ -1,4 +1,4 @@
-import { dual, dualVoid } from './shared';
+import { postJson, postNoContent } from './shared';
 
 export interface AppStatus {
   installed: boolean;
@@ -6,12 +6,7 @@ export interface AppStatus {
 }
 
 export async function checkAppInstalled(appName: string) {
-  return await dual<AppStatus>(
-    'check_app_installed',
-    { appName },
-    '/api/openapp/check-app-installed',
-    { appName }
-  );
+  return await postJson<AppStatus>('/api/openapp/check-app-installed', { appName });
 }
 
 export async function openWorkspaceIn(
@@ -27,10 +22,5 @@ export async function openWorkspaceIn(
     command: options.command ?? null,
     args: options.args ?? [],
   };
-  await dualVoid(
-    'open_workspace_in',
-    { path, options: payload },
-    '/api/openapp/open-workspace-in',
-    { path, options: payload }
-  );
+  await postNoContent('/api/openapp/open-workspace-in', { path, options: payload });
 }

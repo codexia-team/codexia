@@ -1,4 +1,4 @@
-import { dual, dualVoid } from './shared';
+import { postJson, postJsonWithOptions, postNoContent } from './shared';
 
 export type GitStatusEntry = {
   path: string;
@@ -60,7 +60,7 @@ export type GitBranchListResponse = {
 };
 
 export async function gitBranchInfo(cwd: string) {
-  return await dual<GitBranchInfoResponse>('git_branch_info', { cwd }, '/api/git/branch-info', {
+  return await postJson<GitBranchInfoResponse>('/api/git/branch-info', {
     cwd,
   });
 }
@@ -74,9 +74,7 @@ export async function gitBranchInfo(cwd: string) {
 export async function isGitRepo(cwd: string): Promise<boolean> {
   if (!cwd) return false;
   try {
-    await dual<GitBranchInfoResponse>(
-      'git_branch_info',
-      { cwd },
+    await postJsonWithOptions<GitBranchInfoResponse>(
       '/api/git/branch-info',
       { cwd },
       {
@@ -90,66 +88,60 @@ export async function isGitRepo(cwd: string): Promise<boolean> {
 }
 
 export async function gitListBranches(cwd: string) {
-  return await dual<GitBranchListResponse>('git_list_branches', { cwd }, '/api/git/list-branches', {
+  return await postJson<GitBranchListResponse>('/api/git/list-branches', {
     cwd,
   });
 }
 
 export async function gitCreateBranch(cwd: string, branch: string) {
-  await dualVoid('git_create_branch', { cwd, branch }, '/api/git/create-branch', { cwd, branch });
+  await postNoContent('/api/git/create-branch', { cwd, branch });
 }
 
 export async function gitCheckoutBranch(cwd: string, branch: string) {
-  await dualVoid('git_checkout_branch', { cwd, branch }, '/api/git/checkout-branch', {
+  await postNoContent('/api/git/checkout-branch', {
     cwd,
     branch,
   });
 }
 
 export async function gitStatus(cwd: string) {
-  return await dual<GitStatusResponse>('git_status', { cwd }, '/api/git/status', { cwd });
+  return await postJson<GitStatusResponse>('/api/git/status', { cwd });
 }
 
 export async function gitFileDiff(cwd: string, filePath: string, staged: boolean) {
-  return await dual<GitFileDiffResponse>(
-    'git_file_diff',
-    { cwd, filePath, staged },
-    '/api/git/file-diff',
-    { cwd, filePath, staged }
-  );
+  return await postJson<GitFileDiffResponse>('/api/git/file-diff', { cwd, filePath, staged });
 }
 
 export async function gitFileDiffMeta(cwd: string, filePath: string, staged: boolean) {
-  return await dual<GitFileDiffMetaResponse>(
-    'git_file_diff_meta',
-    { cwd, filePath, staged },
-    '/api/git/file-diff-meta',
-    { cwd, filePath, staged }
-  );
+  return await postJson<GitFileDiffMetaResponse>('/api/git/file-diff-meta', {
+    cwd,
+    filePath,
+    staged,
+  });
 }
 
 export async function gitDiffStats(cwd: string) {
-  return await dual<GitDiffStatsResponse>('git_diff_stats', { cwd }, '/api/git/diff-stats', {
+  return await postJson<GitDiffStatsResponse>('/api/git/diff-stats', {
     cwd,
   });
 }
 
 export async function gitStageFiles(cwd: string, filePaths: string[]) {
-  await dualVoid('git_stage_files', { cwd, filePaths }, '/api/git/stage-files', {
+  await postNoContent('/api/git/stage-files', {
     cwd,
     filePaths,
   });
 }
 
 export async function gitUnstageFiles(cwd: string, filePaths: string[]) {
-  await dualVoid('git_unstage_files', { cwd, filePaths }, '/api/git/unstage-files', {
+  await postNoContent('/api/git/unstage-files', {
     cwd,
     filePaths,
   });
 }
 
 export async function gitReverseFiles(cwd: string, filePaths: string[], staged: boolean) {
-  await dualVoid('git_reverse_files', { cwd, filePaths, staged }, '/api/git/reverse-files', {
+  await postNoContent('/api/git/reverse-files', {
     cwd,
     filePaths,
     staged,
@@ -157,37 +149,31 @@ export async function gitReverseFiles(cwd: string, filePaths: string[], staged: 
 }
 
 export async function gitCreateWorktree(cwd: string, worktreeKey: string) {
-  return await dual<GitCreateWorktreeResponse>(
-    'git_create_worktree',
-    { cwd, worktreeKey },
-    '/api/git/create-worktree',
-    { cwd, worktreeKey }
-  );
+  return await postJson<GitCreateWorktreeResponse>('/api/git/create-worktree', {
+    cwd,
+    worktreeKey,
+  });
 }
 
 export async function gitRemoveWorktree(cwd: string, worktreeKey: string): Promise<void> {
-  await dualVoid('git_remove_worktree', { cwd, worktreeKey }, '/api/git/remove-worktree', {
+  await postNoContent('/api/git/remove-worktree', {
     cwd,
     worktreeKey,
   });
 }
 
 export async function gitApplyWorktreeChanges(cwd: string, worktreeKey: string) {
-  return await dual<GitApplyWorktreeResponse>(
-    'git_apply_worktree_changes',
-    { cwd, worktreeKey },
-    '/api/git/apply-worktree-changes',
-    { cwd, worktreeKey }
-  );
+  return await postJson<GitApplyWorktreeResponse>('/api/git/apply-worktree-changes', {
+    cwd,
+    worktreeKey,
+  });
 }
 
 export async function gitHasWorktreeChanges(cwd: string, worktreeKey: string) {
-  return await dual<GitHasWorktreeChangesResponse>(
-    'git_has_worktree_changes',
-    { cwd, worktreeKey },
-    '/api/git/has-worktree-changes',
-    { cwd, worktreeKey }
-  );
+  return await postJson<GitHasWorktreeChangesResponse>('/api/git/has-worktree-changes', {
+    cwd,
+    worktreeKey,
+  });
 }
 
 function resolveCwd(filePath: string): string {
@@ -198,12 +184,11 @@ function resolveCwd(filePath: string): string {
 
 export async function getGitFileDiff<T = unknown>(filePath: string) {
   const cwd = resolveCwd(filePath);
-  const diff = await dual<GitFileDiffResponse>(
-    'git_file_diff',
-    { cwd, filePath, staged: false },
-    '/api/git/file-diff',
-    { cwd, filePath, staged: false }
-  );
+  const diff = await postJson<GitFileDiffResponse>('/api/git/file-diff', {
+    cwd,
+    filePath,
+    staged: false,
+  });
   return {
     original_content: diff.old_content,
     current_content: diff.new_content,
@@ -212,11 +197,11 @@ export async function getGitFileDiff<T = unknown>(filePath: string) {
 }
 
 export async function gitCommit(cwd: string, message: string) {
-  return await dual<string>('git_commit', { cwd, message }, '/api/git/commit', { cwd, message });
+  return await postJson<string>('/api/git/commit', { cwd, message });
 }
 
 export async function gitPush(cwd: string, remote?: string, branch?: string) {
-  return await dual<string>('git_push', { cwd, remote, branch }, '/api/git/push', {
+  return await postJson<string>('/api/git/push', {
     cwd,
     remote,
     branch,

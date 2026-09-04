@@ -4,11 +4,6 @@ use tauri::State;
 use codexia_codex::{AppState, initialize_codex};
 
 #[tauri::command]
-pub async fn codex_home() -> std::path::PathBuf {
-    codexia_codex::utils::codex_home()
-}
-
-#[tauri::command]
 pub async fn initialize_codex_async(
     state: State<'_, AppState>,
     init_state: State<'_, CodexInitializationState>,

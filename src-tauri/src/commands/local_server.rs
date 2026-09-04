@@ -39,9 +39,12 @@ pub fn start_local_server(app: &AppHandle, event_tx: broadcast::Sender<(String, 
             return;
         }
     };
+    // Managed as `AutomationState` (an `Option`), not as a bare handle — asking
+    // for the handle type directly always misses and silently leaves the
+    // automation endpoints reporting "automation runtime is not available".
     let automation = app
-        .try_state::<codexia_automation::AutomationHandle>()
-        .map(|s| s.inner().clone());
+        .try_state::<super::automation::AutomationState>()
+        .and_then(|s| s.inner().clone());
 
     tauri::async_runtime::spawn(async move {
         let result = codexia_web::serve_api(

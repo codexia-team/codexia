@@ -1,16 +1,10 @@
-import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
-import { buildWsUrl, isDesktopTauri } from '@/hooks/runtime';
+import { buildWsUrl } from '@/hooks/runtime';
 import { terminalResize, terminalStart, terminalStop, terminalWrite } from '@/services/apiAdapt';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
-
-// Only the desktop app has a local pty backend on the Tauri event bus; mobile
-// is a webview shell and must reach the paired desktop over the WebSocket,
-// matching how terminalStart/Write/Resize route in the service layer.
-const USE_TAURI_EVENTS = isDesktopTauri();
 
 const TERMINAL_THEME = {
   fontFamily: 'Menlo, Monaco, Consolas, monospace',
@@ -155,39 +149,10 @@ export function TerminalPane({ active, panelOpen }: TerminalPaneProps) {
     [setSession]
   );
 
-  // Transport listener — Tauri event bus on desktop, WebSocket on web.
-  // Both paths funnel into the same two handlers, so they share one effect.
+  // The pty lives in the web server on every platform — the desktop reaches
+  // its own loopback instance, a phone reaches the paired desktop — so output
+  // always arrives over the WebSocket rather than the Tauri event bus.
   useEffect(() => {
-    if (USE_TAURI_EVENTS) {
-      let cancelled = false;
-      let unlistenData: (() => void) | null = null;
-      let unlistenExit: (() => void) | null = null;
-
-      const setup = async () => {
-        const dataFn = await listen<TerminalDataPayload>('terminal:data', (event) =>
-          handleTerminalData(event.payload)
-        );
-        const exitFn = await listen<TerminalExitPayload>('terminal:exit', (event) =>
-          handleTerminalExit(event.payload)
-        );
-        if (cancelled) {
-          dataFn();
-          exitFn();
-          return;
-        }
-        unlistenData = dataFn;
-        unlistenExit = exitFn;
-      };
-      void setup();
-
-      return () => {
-        cancelled = true;
-        unlistenData?.();
-        unlistenExit?.();
-      };
-    }
-
-    // Web mode: WebSocket with auto-reconnect
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let closedByCleanup = false;

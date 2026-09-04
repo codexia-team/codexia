@@ -1,5 +1,5 @@
 import type { Provider } from '@/stores/settings';
-import { dual, dualVoid } from './shared';
+import { postJson, postNoContent } from './shared';
 
 export type AutomationScheduleMode = 'daily' | 'interval';
 export type AutomationWeekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
@@ -42,17 +42,12 @@ export type AutomationRun = {
 };
 
 export async function listAutomations() {
-  return await dual<AutomationTask[]>('list_automations', undefined, '/api/automation/list', {});
+  return await postJson<AutomationTask[]>('/api/automation/list', {});
 }
 
 export async function listAutomationRuns(payload?: { task_id?: string; limit?: number }) {
   const params = { task_id: payload?.task_id ?? null, limit: payload?.limit ?? 100 };
-  return await dual<AutomationRun[]>(
-    'list_automation_runs',
-    params,
-    '/api/automation/runs/list',
-    params
-  );
+  return await postJson<AutomationRun[]>('/api/automation/runs/list', params);
 }
 
 export async function createAutomation(payload: {
@@ -65,12 +60,7 @@ export async function createAutomation(payload: {
   model?: string;
   cwd_mode?: AutomationCwdMode;
 }) {
-  return await dual<AutomationTask>(
-    'create_automation',
-    { ...payload, modelProvider: payload.model_provider, cwdMode: payload.cwd_mode },
-    '/api/automation/create',
-    payload
-  );
+  return await postJson<AutomationTask>('/api/automation/create', payload);
 }
 
 export async function updateAutomation(payload: {
@@ -84,27 +74,17 @@ export async function updateAutomation(payload: {
   model?: string;
   cwd_mode?: AutomationCwdMode;
 }) {
-  return await dual<AutomationTask>(
-    'update_automation',
-    { ...payload, modelProvider: payload.model_provider, cwdMode: payload.cwd_mode },
-    '/api/automation/update',
-    payload
-  );
+  return await postJson<AutomationTask>('/api/automation/update', payload);
 }
 
 export async function setAutomationPaused(id: string, paused: boolean) {
-  return await dual<AutomationTask>(
-    'set_automation_paused',
-    { id, paused },
-    '/api/automation/set-paused',
-    { id, paused }
-  );
+  return await postJson<AutomationTask>('/api/automation/set-paused', { id, paused });
 }
 
 export async function deleteAutomation(id: string) {
-  await dualVoid('delete_automation', { id }, '/api/automation/delete', { id });
+  await postNoContent('/api/automation/delete', { id });
 }
 
 export async function runAutomationNow(id: string) {
-  await dualVoid('run_automation_now', { id }, '/api/automation/run-now', { id });
+  await postNoContent('/api/automation/run-now', { id });
 }

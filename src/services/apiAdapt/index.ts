@@ -1,4 +1,5 @@
-import { invokeTauri, isDesktopTauri } from './shared';
+import { readTextFile, writeFile } from './filesystem';
+import { isDesktopTauri } from './shared';
 
 export * from './acp';
 export * from './automation';
@@ -8,6 +9,7 @@ export * from './codex';
 export * from './dictation';
 export * from './filesystem';
 export * from './git';
+export * from './lifecycle';
 export * from './openapp';
 export type {
   InstalledSkillItem,
@@ -27,14 +29,14 @@ const SESSION_META_FILE_PATH = '~/.plux/session_meta.json';
 
 export async function readSessionMetaFile(): Promise<string> {
   if (isDesktopTauri()) {
-    return await invokeTauri<string>('read_text_file', { filePath: SESSION_META_FILE_PATH });
+    return await readTextFile(SESSION_META_FILE_PATH, { suppressToast: true });
   }
   return window.localStorage.getItem(SESSION_META_STORAGE_KEY) ?? '{}';
 }
 
 export async function writeSessionMetaFile(content: string): Promise<void> {
   if (isDesktopTauri()) {
-    return await invokeTauri<void>('write_file', { filePath: SESSION_META_FILE_PATH, content });
+    return await writeFile(SESSION_META_FILE_PATH, content);
   }
   window.localStorage.setItem(SESSION_META_STORAGE_KEY, content);
 }

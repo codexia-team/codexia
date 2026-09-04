@@ -74,9 +74,10 @@ export function useCodexEvents(enabled = true) {
     onNotification: handleServerNotification,
   };
 
-  // Only one of these actually registers listeners (both hooks internally
-  // gate on `enabled`, but we also gate on transport to avoid opening an
-  // unnecessary EventSource on desktop or vice versa).
+  // Agent events reach the desktop over the Tauri bus and everyone else over
+  // SSE. The SSE stream stays open on desktop as well, because the filesystem
+  // watcher now only publishes there — the bridge drops the duplicate agent
+  // events itself.
   useTauriEventListeners({ ...sharedHandlers, enabled: enabled && isDesktopTauri() });
-  useSseEventBridge({ ...sharedHandlers, enabled: enabled && !isDesktopTauri() });
+  useSseEventBridge({ ...sharedHandlers, enabled });
 }
