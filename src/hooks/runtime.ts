@@ -6,6 +6,13 @@ export const DEFAULT_PORT = 7420;
 const configuredPort = Number(import.meta.env.VITE_WEB_PORT || DEFAULT_PORT);
 
 /**
+ * Port the desktop app's own loopback API server listens on — always up,
+ * independent of the remote toggle. See `commands::local_server::LOCAL_PORT`
+ * in src-tauri.
+ */
+const DESKTOP_LOCAL_PORT = 7419;
+
+/**
  * The host platform, or null in the web build where there is no Tauri runtime.
  *
  * `platform()` is synchronous and reads a global the plugin injects as a
@@ -25,6 +32,14 @@ const resolveApiBase = () => {
   const desktop = pairedDesktop();
   if (desktop) {
     return desktopBaseUrl(desktop);
+  }
+
+  // The webview's own origin (`tauri://localhost`, or `http://tauri.localhost`
+  // on Windows/Android) isn't an HTTP address `fetch` can hit — the desktop
+  // app's own loopback server always lives on 127.0.0.1, on its own port, no
+  // pairing token needed (see `require_device_token`'s loopback exemption).
+  if (isDesktopTauri()) {
+    return `http://127.0.0.1:${DESKTOP_LOCAL_PORT}`;
   }
 
   if (import.meta.env.PROD && !isPhone()) {

@@ -132,18 +132,6 @@ pub fn run() {
                 commands::codex::initialize_codex_async,
                 commands::openapp::check_app_installed,
                 commands::openapp::open_workspace_in,
-                commands::fs::read_directory,
-                commands::fs::get_home_directory,
-                commands::fs::search_files,
-                commands::fs::search_files_by_name,
-                commands::fs::canonicalize_path,
-                commands::fs::read_text_file,
-                commands::fs::read_text_file_lines,
-                commands::fs::write_file,
-                commands::fs::delete_file,
-                commands::fs::read_file,
-                commands::fs::watch_directory,
-                commands::fs::unwatch_directory,
                 commands::sleep::prevent_sleep,
                 commands::sleep::allow_sleep,
                 commands::acp::acp_list_agents,
@@ -328,6 +316,20 @@ pub fn run() {
                 }
 
                 cc::scan::start_session_scanner();
+
+                // Always serve the loopback API, independent of the remote
+                // toggle: the frontend calls it for endpoints that have been
+                // migrated off `#[tauri::command]` onto the same HTTP handlers
+                // the web build uses, so there is one implementation instead
+                // of two. Reuses the remote channel's sender so events flow to
+                // this server's `/ws` and `/api/events` too.
+                {
+                    let remote = app.state::<commands::remote::RemoteState>();
+                    commands::local_server::start_local_server(
+                        app.handle(),
+                        remote.event_tx.clone(),
+                    );
+                }
 
                 // Restore remote access if the user left it on, so a paired
                 // phone can reach this machine after a restart without someone
