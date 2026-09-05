@@ -59,6 +59,71 @@ fn read_blob_as_text(repo: &gix::Repository, id: &gix::hash::oid) -> Result<Stri
     Ok(String::from_utf8_lossy(&object.data).to_string())
 }
 
+/// Git's own heuristic: a NUL byte in the leading chunk means binary.
+fn bytes_look_binary(bytes: &[u8]) -> bool {
+    let window = bytes.len().min(8000);
+    bytes[..window].contains(&0)
+}
+
+fn blob_is_binary(repo: &gix::Repository, id: &gix::hash::oid) -> Result<bool, String> {
+    let object = repo
+        .find_object(id.to_owned())
+        .map_err(|err| format!("Failed to read object: {err}"))?;
+    if object.kind != gix::object::Kind::Blob {
+        return Ok(false);
+    }
+    Ok(bytes_look_binary(&object.data))
+}
+
+pub(super) fn index_blob_is_binary(
+    repo: &gix::Repository,
+    index: &gix::index::File,
+    path: &str,
+) -> Result<bool, String> {
+    let entry = match index.entry_by_path_and_stage(
+        path.as_bytes().as_bstr(),
+        gix::index::entry::Stage::Unconflicted,
+    ) {
+        Some(entry) => entry,
+        None => return Ok(false),
+    };
+    blob_is_binary(repo, &entry.id)
+}
+
+pub(super) fn head_blob_is_binary(repo: &gix::Repository, path: &str) -> Result<bool, String> {
+    let (id, _) = match entry_from_tree(repo, path)? {
+        Some(entry) => entry,
+        None => return Ok(false),
+    };
+    blob_is_binary(repo, &id)
+}
+
+pub(super) fn worktree_is_binary(repo: &gix::Repository, path: &str) -> Result<bool, String> {
+    use std::io::Read;
+
+    let root = match repo.workdir() {
+        Some(path) => path,
+        None => return Ok(false),
+    };
+    let absolute_path = root.join(path);
+    let metadata = match std::fs::symlink_metadata(&absolute_path) {
+        Ok(metadata) => metadata,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(err) => return Err(format!("Failed to read file metadata: {err}")),
+    };
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Ok(false);
+    }
+
+    let mut file = std::fs::File::open(&absolute_path)
+        .map_err(|err| format!("Failed to read file content: {err}"))?;
+    let mut head = [0u8; 8000];
+    let read = file
+        .read(&mut head)
+        .map_err(|err| format!("Failed to read file content: {err}"))?;
+    Ok(bytes_look_binary(&head[..read]))
+}
+
 fn blob_size(repo: &gix::Repository, id: &gix::hash::oid) -> Result<usize, String> {
     let object = repo
         .find_object(id.to_owned())

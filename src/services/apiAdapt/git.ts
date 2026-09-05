@@ -15,12 +15,14 @@ export type GitFileDiffResponse = {
   old_content: string;
   new_content: string;
   has_changes: boolean;
+  is_binary: boolean;
 };
 
 export type GitFileDiffMetaResponse = {
   old_bytes: number;
   new_bytes: number;
   total_bytes: number;
+  is_binary: boolean;
 };
 
 export type GitDiffStatsCounts = {

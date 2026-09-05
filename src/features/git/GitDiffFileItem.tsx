@@ -80,7 +80,9 @@ export function GitDiffFileItem({
         if (cancelled) return;
         setDiffMeta(meta);
 
-        if (meta.total_bytes <= LARGE_DIFF_THRESHOLD_BYTES) {
+        // Binary blobs (images, pptx, ...) have no meaningful text diff and
+        // would otherwise be stringified and line-diffed, freezing the panel.
+        if (!meta.is_binary && meta.total_bytes <= LARGE_DIFF_THRESHOLD_BYTES) {
           const data = await gitFileDiff(cwd, entry.path, section === 'staged');
           if (cancelled) return;
           setDiffData(data);
@@ -100,7 +102,7 @@ export function GitDiffFileItem({
 
   // Load full data once user confirms large diff
   useEffect(() => {
-    if (!largeDiffConfirmed) return;
+    if (!largeDiffConfirmed || diffMeta?.is_binary) return;
 
     let cancelled = false;
     setLoading(true);
@@ -119,7 +121,7 @@ export function GitDiffFileItem({
     return () => {
       cancelled = true;
     };
-  }, [largeDiffConfirmed, cwd, entry.path, section]);
+  }, [largeDiffConfirmed, diffMeta?.is_binary, cwd, entry.path, section]);
 
   const diffHunks = useMemo(() => {
     if (!diffData || !diffData.has_changes) return [];
@@ -177,7 +179,8 @@ export function GitDiffFileItem({
   const status = statusTextForSection(entry, section);
   const name = entry.path.split('/').pop() ?? entry.path;
   const dir = entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : null;
-  const isLarge = diffMeta ? diffMeta.total_bytes > LARGE_DIFF_THRESHOLD_BYTES : false;
+  const isBinary = diffMeta?.is_binary ?? false;
+  const isLarge = diffMeta ? !isBinary && diffMeta.total_bytes > LARGE_DIFF_THRESHOLD_BYTES : false;
 
   return (
     <div
@@ -300,6 +303,12 @@ export function GitDiffFileItem({
               <Button size="sm" className="mt-2" onClick={() => setLargeDiffConfirmed(true)}>
                 Load diff
               </Button>
+            </div>
+          )}
+
+          {!loading && isBinary && diffMeta && (
+            <div className="px-3 py-2 text-xs text-muted-foreground">
+              Binary file not shown ({formatBytes(diffMeta.total_bytes)})
             </div>
           )}
 

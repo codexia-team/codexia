@@ -1,6 +1,7 @@
 use crate::helpers::{
-    head_blob_content, head_blob_size, index_blob_content, index_blob_size, open_repo, to_repo_relative_path,
-    worktree_content, worktree_size,
+    head_blob_content, head_blob_is_binary, head_blob_size, index_blob_content, index_blob_is_binary,
+    index_blob_size, open_repo, to_repo_relative_path, worktree_content, worktree_is_binary,
+    worktree_size,
 };
 use crate::stats::{staged_diff_stats, unstaged_diff_stats};
 use crate::types::{
@@ -18,6 +19,25 @@ pub fn git_file_diff(
         .index_or_empty()
         .map_err(|err| format!("Failed to load git index: {err}"))?;
 
+    let is_binary = if staged {
+        head_blob_is_binary(&repo, &relative_path)?
+            || index_blob_is_binary(&repo, &index, &relative_path)?
+    } else {
+        index_blob_is_binary(&repo, &index, &relative_path)?
+            || worktree_is_binary(&repo, &relative_path)?
+    };
+
+    // Binary blobs would be lossily stringified and then diffed line by line,
+    // which is both meaningless and very slow — report the flag instead.
+    if is_binary {
+        return Ok(GitFileDiffResult {
+            has_changes: true,
+            old_content: String::new(),
+            new_content: String::new(),
+            is_binary: true,
+        });
+    }
+
     let (old_content, new_content) = if staged {
         (
             head_blob_content(&repo, &relative_path)?.unwrap_or_default(),
@@ -34,6 +54,7 @@ pub fn git_file_diff(
         has_changes: old_content != new_content,
         old_content,
         new_content,
+        is_binary: false,
     })
 }
 
@@ -47,6 +68,14 @@ pub fn git_file_diff_meta(
     let index = repo
         .index_or_empty()
         .map_err(|err| format!("Failed to load git index: {err}"))?;
+
+    let is_binary = if staged {
+        head_blob_is_binary(&repo, &relative_path)?
+            || index_blob_is_binary(&repo, &index, &relative_path)?
+    } else {
+        index_blob_is_binary(&repo, &index, &relative_path)?
+            || worktree_is_binary(&repo, &relative_path)?
+    };
 
     let (old_bytes, new_bytes) = if staged {
         (
@@ -64,6 +93,7 @@ pub fn git_file_diff_meta(
         old_bytes,
         new_bytes,
         total_bytes: old_bytes.saturating_add(new_bytes),
+        is_binary,
     })
 }
 

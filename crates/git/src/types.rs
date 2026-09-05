@@ -18,6 +18,7 @@ pub struct GitFileDiffResult {
     pub old_content: String,
     pub new_content: String,
     pub has_changes: bool,
+    pub is_binary: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -25,6 +26,7 @@ pub struct GitFileDiffMetaResult {
     pub old_bytes: usize,
     pub new_bytes: usize,
     pub total_bytes: usize,
+    pub is_binary: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
