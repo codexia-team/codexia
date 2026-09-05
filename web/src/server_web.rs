@@ -20,6 +20,7 @@ pub async fn start_web_server_with_events(
     event_tx: broadcast::Sender<(String, Value)>,
     host: &str,
     port: u16,
+    ready: Option<std::sync::mpsc::Sender<()>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if let Ok(cwd) = std::env::current_dir() {
         log::info!("[web] startup cwd: {}", cwd.display());
@@ -67,6 +68,13 @@ pub async fn start_web_server_with_events(
     log::info!("Web server listening on http://{}:{}", host, port);
     log_remote_access(host, port);
 
+    // Only signal readiness once the listener is actually bound, so callers
+    // that open a browser don't race the (potentially slow) codex/cc startup
+    // above and hit a connection-refused before the port is listening.
+    if let Some(ready) = ready {
+        let _ = ready.send(());
+    }
+
     // ConnectInfo carries the peer address the auth layer needs to decide
     // whether a request is local and may skip the device token.
     axum::serve(
@@ -78,7 +86,11 @@ pub async fn start_web_server_with_events(
     Ok(())
 }
 
-pub async fn start_web_server(host: &str, port: u16) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_web_server(
+    host: &str,
+    port: u16,
+    ready: Option<std::sync::mpsc::Sender<()>>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let boot_started_at = Instant::now();
     // Sized above the hub's replay buffer so the sequencing task never lags
     // behind the emitters — anything dropped here is lost before it gets a seq.
@@ -125,7 +137,7 @@ pub async fn start_web_server(host: &str, port: u16) -> Result<(), Box<dyn std::
 
     let cc_state = Arc::new(CCState::new(Arc::new(WebSocketEventSink::new(event_tx.clone()))));
     log::info!("[web] boot completed in {:?}", boot_started_at.elapsed());
-    start_web_server_with_events(codex_state, cc_state, event_tx, host, port).await
+    start_web_server_with_events(codex_state, cc_state, event_tx, host, port, ready).await
 }
 
 /// Logs how to reach this server from another device, so the tailnet hostname
