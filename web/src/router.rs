@@ -108,13 +108,36 @@ fn resolve_dist_dir() -> PathBuf {
     selected
 }
 
+static EXTRA_ALLOWED_ORIGINS: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+
+/// Adds operator-configured origins (e.g. `--allow-origin https://my.host`) to
+/// the CORS allowlist, on top of the loopback/Tailscale defaults below. Call
+/// once at startup, before the server starts accepting connections.
+///
+/// This only widens which origins the browser lets make the request — every
+/// non-loopback request still needs a valid device token (see `auth.rs`), so
+/// an extra origin alone cannot drive the desktop.
+pub fn set_extra_allowed_origins(origins: Vec<String>) {
+    if EXTRA_ALLOWED_ORIGINS.set(origins).is_err() {
+        log::warn!("set_extra_allowed_origins called more than once; ignoring later call");
+    }
+}
+
 /// Whether a browser origin may call this API cross-origin.
 ///
-/// Only the locally served UI and Tailscale hostnames qualify. Anything else —
-/// an arbitrary site the user happens to visit — must not be able to drive the
-/// desktop, which matters especially because the auth layer exempts loopback
-/// requests from presenting a token.
+/// Only the locally served UI and Tailscale hostnames qualify by default.
+/// Anything else — an arbitrary site the user happens to visit — must not be
+/// able to drive the desktop, which matters especially because the auth
+/// layer exempts loopback requests from presenting a token. Operators can
+/// add more origins via `set_extra_allowed_origins`.
 fn origin_is_allowed(origin: &str) -> bool {
+    if let Some(extra) = EXTRA_ALLOWED_ORIGINS.get() {
+        if extra.iter().any(|allowed| allowed == origin) {
+            return true;
+        }
+    }
+
+
     // Tauri mobile webviews use their own scheme for the bundled app itself:
     // `tauri://localhost` on iOS, `http://tauri.localhost` on Android.
     if origin == "tauri://localhost" {
