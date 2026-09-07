@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import {
   type AcpSessionRecord,
-  type AcpSessionResult,
   acpGetSession,
   acpLoadSession,
   acpNewSession,
@@ -129,16 +128,20 @@ export function useBotSession() {
               sessionId: requestedSession.sessionId,
             });
             activeSessionId = requestedSession.sessionId;
+            // `session/load` makes the agent stream the whole transcript back
+            // as live updates, which `applySession` has already put on screen.
+            // Replaying the stored copy on top would show every message twice.
+            ui.setBotSession(bot.id, activeSessionId);
           } else {
             const session = await acpNewSession(existing, bot.cwd);
             store.applySession(session);
             activeSessionId = session.sessionId;
+            ui.setBotSession(bot.id, activeSessionId);
+            replayInto(bot.id, {
+              history: [],
+              current: await acpGetSession(requestedSession.sessionId).catch(() => []),
+            });
           }
-          ui.setBotSession(bot.id, activeSessionId);
-          replayInto(bot.id, {
-            history: [],
-            current: await acpGetSession(requestedSession.sessionId).catch(() => []),
-          });
         } else {
           replayInto(bot.id, await loadTranscript(bot.id, activeSessionId));
         }
@@ -171,28 +174,17 @@ export function useBotSession() {
         const canLoadSession = res.initialize.agentCapabilities?.loadSession === true;
         const sessionToRestore =
           requestedSession ?? (await listBotSessions(bot.id).catch(() => []))[0];
-        // The agent may claim `loadSession` support yet still fail to resume a
-        // session from a previous process (e.g. it only kept it in memory) —
-        // fall back to the fresh session rather than let the whole bot fail
-        // to open over a stale session id.
         let restoreStoredSession = Boolean(sessionToRestore && canLoadSession);
-        let loadedSession: AcpSessionResult | null = null;
-        if (restoreStoredSession && sessionToRestore) {
-          try {
-            loadedSession = await acpLoadSession(
-              res.connectionId,
-              sessionToRestore.sessionId,
-              sessionToRestore.cwd
-            );
-          } catch (e) {
-            console.warn(`bot: ${bot.name} could not resume session, starting fresh`, e);
-            restoreStoredSession = false;
-          }
-        }
-        const activeSessionId = restoreStoredSession
+        let activeSessionId = restoreStoredSession
           ? (sessionToRestore as AcpSessionRecord).sessionId
           : res.sessionId;
 
+        // The store's connection/session must be set — and entries cleared —
+        // before `session/load` is awaited below: the agent streams the
+        // replayed transcript as live `session/update` events the moment it
+        // starts, and those need this bot's (now-empty) entries to land in,
+        // not whatever was on screen before or a later `applySession` that
+        // would otherwise double them up.
         store.setConnection({
           connectionId: res.connectionId,
           sessionId: activeSessionId,
@@ -202,8 +194,33 @@ export function useBotSession() {
         });
         if (restoreStoredSession && sessionToRestore) {
           store.setEntries([]);
-          store.applySession({ ...loadedSession, sessionId: sessionToRestore.sessionId });
-          ui.setBotSession(bot.id, sessionToRestore.sessionId);
+          try {
+            store.applySession({
+              ...(await acpLoadSession(
+                res.connectionId,
+                sessionToRestore.sessionId,
+                sessionToRestore.cwd
+              )),
+              sessionId: sessionToRestore.sessionId,
+            });
+            ui.setBotSession(bot.id, sessionToRestore.sessionId);
+          } catch (e) {
+            // The agent may claim `loadSession` support yet still fail to
+            // resume a session from a previous process (e.g. it only kept it
+            // in memory) — fall back to the fresh session rather than let the
+            // whole bot fail to open over a stale session id.
+            console.warn(`bot: ${bot.name} could not resume session, starting fresh`, e);
+            restoreStoredSession = false;
+            activeSessionId = res.sessionId;
+            store.setConnection({
+              connectionId: res.connectionId,
+              sessionId: res.sessionId,
+              agentTitle: bot.name,
+              authMethods: res.initialize.authMethods ?? [],
+              canLoadSession,
+            });
+            store.applySession(res.session);
+          }
         } else {
           store.applySession(res.session);
         }
