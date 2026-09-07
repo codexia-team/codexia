@@ -42,6 +42,7 @@ impl AcpState {
         agent_id: &str,
         cwd: &str,
         custom: Option<AcpAgentDef>,
+        bot_id: Option<String>,
     ) -> Result<AcpStartResult, String> {
         let agent = match custom {
             Some(a) => a,
@@ -50,7 +51,8 @@ impl AcpState {
 
         let connection_id = uuid::Uuid::new_v4().to_string();
         let (client, initialize) =
-            AcpClient::spawn(connection_id.clone(), &agent, Some(cwd), self.sink.clone()).await?;
+            AcpClient::spawn(connection_id.clone(), &agent, Some(cwd), bot_id, self.sink.clone())
+                .await?;
         self.connections.insert(connection_id.clone(), client.clone());
 
         let (session, session_error) = match client.new_session(cwd).await {

@@ -60,6 +60,9 @@ export const ja = {
     unknownError: '不明',
   },
   sidebar: {
+    agent: 'エージェント',
+    bot: 'ボット',
+    newBot: '新しいボット',
     usage: '使用状況',
     settings: '設定',
     login: 'ログイン',

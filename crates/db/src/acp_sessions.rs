@@ -12,6 +12,9 @@ pub struct AcpSessionRecord {
     pub agent_id: String,
     pub agent_title: Option<String>,
     pub cwd: String,
+    /// The bot this conversation belongs to, when it was opened from the Bot
+    /// tab. `None` for the ordinary per-project ACP sessions.
+    pub bot_id: Option<String>,
     /// First user message of the session, used as the list label.
     pub title: Option<String>,
     pub created_at: String,
@@ -27,18 +30,20 @@ pub fn upsert_session(
     agent_id: &str,
     agent_title: Option<&str>,
     cwd: &str,
+    bot_id: Option<&str>,
 ) -> Result<(), String> {
     let conn = get_connection()?;
     let now = Utc::now().to_rfc3339();
     conn.execute(
         "INSERT INTO acp_sessions (
-            session_id, agent_id, agent_title, cwd, title, created_at, updated_at
-        ) VALUES (?1, ?2, ?3, ?4, NULL, ?5, ?5)
+            session_id, agent_id, agent_title, cwd, bot_id, title, created_at, updated_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, NULL, ?6, ?6)
         ON CONFLICT(session_id) DO UPDATE SET
             agent_id = excluded.agent_id,
             agent_title = excluded.agent_title,
-            cwd = excluded.cwd",
-        params![session_id, agent_id, agent_title, cwd, now],
+            cwd = excluded.cwd,
+            bot_id = excluded.bot_id",
+        params![session_id, agent_id, agent_title, cwd, bot_id, now],
     )
     .map_err(|e| format!("Failed to upsert ACP session: {}", e))?;
     Ok(())
@@ -75,15 +80,17 @@ pub fn set_title_if_empty(session_id: &str, title: &str) -> Result<(), String> {
 }
 
 /// Sessions for `cwd`, or all of them when `cwd` is `None`, newest first.
+/// Bot conversations are left out: they belong to a bot, not to a project, and
+/// listing them beside the project's own sessions would show each twice.
 pub fn list_sessions(cwd: Option<&str>, limit: usize) -> Result<Vec<AcpSessionRecord>, String> {
     let conn = get_connection()?;
     let limit = if limit == 0 { 100 } else { limit.min(500) } as i64;
 
     let mut stmt = conn
         .prepare(
-            "SELECT session_id, agent_id, agent_title, cwd, title, created_at, updated_at
+            "SELECT session_id, agent_id, agent_title, cwd, bot_id, title, created_at, updated_at
              FROM acp_sessions
-             WHERE (?1 IS NULL OR cwd = ?1)
+             WHERE (?1 IS NULL OR cwd = ?1) AND bot_id IS NULL
              ORDER BY updated_at DESC
              LIMIT ?2",
         )
@@ -96,15 +103,51 @@ pub fn list_sessions(cwd: Option<&str>, limit: usize) -> Result<Vec<AcpSessionRe
                 agent_id: row.get(1)?,
                 agent_title: row.get(2)?,
                 cwd: row.get(3)?,
-                title: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
+                bot_id: row.get(4)?,
+                title: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })
         .map_err(|e| format!("Failed to query ACP sessions: {}", e))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read ACP sessions: {}", e))
+}
+
+/// One bot's conversations, newest first. Reads the table only — the sidebar
+/// must be able to show a bot without waking its agent process.
+pub fn list_bot_sessions(bot_id: &str, limit: usize) -> Result<Vec<AcpSessionRecord>, String> {
+    let conn = get_connection()?;
+    let limit = if limit == 0 { 100 } else { limit.min(500) } as i64;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT session_id, agent_id, agent_title, cwd, bot_id, title, created_at, updated_at
+             FROM acp_sessions
+             WHERE bot_id = ?1
+             ORDER BY updated_at DESC
+             LIMIT ?2",
+        )
+        .map_err(|e| format!("Failed to prepare bot session list query: {}", e))?;
+
+    let rows = stmt
+        .query_map(params![bot_id, limit], |row| {
+            Ok(AcpSessionRecord {
+                session_id: row.get(0)?,
+                agent_id: row.get(1)?,
+                agent_title: row.get(2)?,
+                cwd: row.get(3)?,
+                bot_id: row.get(4)?,
+                title: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })
+        .map_err(|e| format!("Failed to query bot sessions: {}", e))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to read bot sessions: {}", e))
 }
 
 /// The stored transcript, in arrival order. Each item is a `session/update`

@@ -68,6 +68,9 @@ export const en = {
   },
   sidebar: {
     newChat: 'New Chat',
+    agent: 'Agent',
+    bot: 'Bot',
+    newBot: 'New Bot',
     plugins: 'Plugins',
     automations: 'Automations',
     insights: 'Insights',

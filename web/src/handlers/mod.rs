@@ -13,6 +13,7 @@ mod file;
 mod git;
 mod openapp;
 mod automation;
+mod bots;
 mod insights;
 mod skills;
 mod settings;
@@ -21,6 +22,7 @@ mod terminal;
 mod types;
 
 pub(super) use acp::*;
+pub(super) use bots::*;
 pub(super) use cc::*;
 pub(super) use codex::*;
 pub(super) use file::*;

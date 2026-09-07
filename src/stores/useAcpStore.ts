@@ -40,6 +40,10 @@ export type AcpPermissionOption = { optionId: string; name: string; kind?: strin
 export type AcpPermissionRequest = {
   requestId: string;
   title: string;
+  /** The tool call's category (`read`, `edit`, `execute`, ...) when the agent
+   * reported one. Coarse on purpose: it is the unit a standing "always allow"
+   * can be about, where a per-call title never repeats. */
+  toolKind?: string;
   options: AcpPermissionOption[];
 };
 

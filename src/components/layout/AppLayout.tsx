@@ -15,6 +15,7 @@ const AutoMationsView = lazy(() =>
   import('../../features/automations').then((module) => ({ default: module.AutoMationsView }))
 );
 const InsightsView = lazy(() => import('@/features/insight/InsightsView'));
+const BotChatView = lazy(() => import('@/components/bot/BotChatView'));
 
 // Inner component so it can call useSidebar() inside SidebarProvider
 const MIN_RIGHT_PANEL_SIZE = 22;
@@ -183,6 +184,7 @@ export function AppLayout() {
           {view === 'automations' && <AutoMationsView />}
           {view === 'plugins' && <PluginsView />}
           {view === 'insights' && <InsightsView />}
+          {view === 'bot' && <BotChatView />}
         </Suspense>
       </div>
     </div>

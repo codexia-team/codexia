@@ -24,6 +24,48 @@ fn init_tables(conn: &Connection) -> Result<(), String> {
     init_notes_table(conn)?;
     init_automation_runs_tables(conn)?;
     init_acp_sessions_tables(conn)?;
+    init_bots_table(conn)?;
+    Ok(())
+}
+
+/// Create the bot registry. Conversations are not stored here: a bot's history
+/// is its ACP sessions, tagged with `acp_sessions.bot_id`.
+fn init_bots_table(conn: &Connection) -> Result<(), String> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS bots (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            title TEXT,
+            avatar TEXT NOT NULL,
+            color TEXT NOT NULL,
+            agent_id TEXT NOT NULL,
+            provider TEXT,
+            model TEXT,
+            reasoning_effort TEXT,
+            cwd TEXT NOT NULL,
+            system_prompt TEXT,
+            trust_level TEXT NOT NULL,
+            approved_tools TEXT NOT NULL DEFAULT '[]',
+            mcp_servers TEXT NOT NULL DEFAULT '[]',
+            pinned BOOLEAN NOT NULL DEFAULT 0,
+            archived BOOLEAN NOT NULL DEFAULT 0,
+            notifications_enabled BOOLEAN NOT NULL DEFAULT 1,
+            unread_count INTEGER NOT NULL DEFAULT 0,
+            last_viewed_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create bots table: {}", e))?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_bots_pinned_updated
+         ON bots(pinned DESC, updated_at DESC)",
+        [],
+    )
+    .map_err(|e| format!("Failed to create bots index: {}", e))?;
+
     Ok(())
 }
 
@@ -53,6 +95,21 @@ fn init_acp_sessions_tables(conn: &Connection) -> Result<(), String> {
         [],
     )
     .map_err(|e| format!("Failed to create acp_session_updates table: {}", e))?;
+
+    // Added after the table shipped, so an existing database gets it here.
+    if let Err(err) = conn.execute("ALTER TABLE acp_sessions ADD COLUMN bot_id TEXT", []) {
+        let message = err.to_string();
+        if !message.contains("duplicate column name") {
+            return Err(format!("Failed to add acp_sessions.bot_id column: {message}"));
+        }
+    }
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_acp_sessions_bot_updated
+         ON acp_sessions(bot_id, updated_at DESC)",
+        [],
+    )
+    .map_err(|e| format!("Failed to create acp_sessions bot index: {}", e))?;
 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_acp_sessions_cwd_updated

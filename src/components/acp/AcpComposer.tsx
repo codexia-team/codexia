@@ -24,7 +24,7 @@ export function AcpComposer() {
     restartNonce,
   } = useAcpStore();
   const cwd = useWorkspaceStore((s) => s.cwd);
-  const agents = useAcpAgents();
+  const agents = useAcpAgents() ?? [];
   const [text, setText] = useState('');
   // Agent we already tried to auto-connect, so a failed start does not spin in
   // a retry loop. Cleared on an explicit restart.
