@@ -2,11 +2,15 @@ import { useEffect, useRef } from 'react';
 import { AcpToolCall } from '@/components/acp/AcpToolCall';
 import type { Bot } from '@/services/apiAdapt/bots';
 import { useAcpStore } from '@/stores/useAcpStore';
+import { useBotUiStore } from '@/stores/useBotUiStore';
 import { BotAvatar } from './BotAvatar';
 
 /** The conversation, as chat bubbles: you on the right, the bot on the left. */
 export function BotMessageList({ bot }: { bot: Bot }) {
-  const { entries, connecting, running } = useAcpStore();
+  const { entries, connecting } = useAcpStore();
+  // Per-bot, so a turn running in another conversation does not show this bot
+  // as typing.
+  const running = useBotUiStore((s) => Boolean(s.runningByBot[bot.id]));
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the count is the trigger, not a value the effect reads

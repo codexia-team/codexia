@@ -31,7 +31,7 @@ export function SideBarBotPane() {
   const { bots, setBots, upsertBot, selectedBotId, connectionByBot } = useBotUiStore();
   const setView = useLayoutStore((s) => s.setView);
   const cwd = useWorkspaceStore((s) => s.cwd);
-  const { open } = useBotSession();
+  const { open, openBlank } = useBotSession();
   const [newBot, setNewBot] = useState<Bot | null>(null);
 
   useEffect(() => {
@@ -51,13 +51,13 @@ export function SideBarBotPane() {
         cwd: cwd ?? '',
       });
       upsertBot(bot);
-      useBotUiStore.getState().setSelectedBotId(bot.id);
+      openBlank(bot);
       setView('bot');
       setNewBot(bot);
     } catch (e) {
       toast({ title: 'Could not create bot', description: String(e), variant: 'destructive' });
     }
-  }, [bots.length, cwd, setView, upsertBot]);
+  }, [bots.length, cwd, openBlank, setView, upsertBot]);
 
   const select = useCallback(
     (bot: Bot) => {

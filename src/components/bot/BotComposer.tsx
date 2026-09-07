@@ -10,10 +10,12 @@ import { BotKekeInstall } from './BotKekeInstall';
 import { useBotSession } from './useBotSession';
 
 export function BotComposer({ bot }: { bot: Bot }) {
-  const { connectionId, sessionId, connecting, running, setRunning, addEntry } = useAcpStore();
+  const { connectionId, connecting, setRunning, addEntry } = useAcpStore();
   const connectionByBot = useBotUiStore((s) => s.connectionByBot);
   const sessionByBot = useBotUiStore((s) => s.sessionByBot);
   const kekeSpawnFailed = useBotUiStore((s) => s.kekeSpawnFailed);
+  const running = useBotUiStore((s) => Boolean(s.runningByBot[bot.id]));
+  const setBotRunning = useBotUiStore((s) => s.setBotRunning);
   const { open } = useBotSession();
   const [text, setText] = useState('');
 
@@ -50,19 +52,27 @@ export function BotComposer({ bot }: { bot: Bot }) {
 
     setText('');
     addEntry({ id: `u-${Date.now()}`, role: 'user', text: trimmed });
+    setBotRunning(bot.id, true);
     setRunning(true);
     try {
       await acpPrompt(live.connectionId, live.sessionId, trimmed);
     } catch (e) {
-      addEntry({ id: `e-${Date.now()}`, role: 'error', text: String(e) });
+      // Only the bot on screen owns the ACP store: a turn that ends while the
+      // user is reading another bot must not write into that bot's pane.
+      if (useBotUiStore.getState().selectedBotId === bot.id) {
+        addEntry({ id: `e-${Date.now()}`, role: 'error', text: String(e) });
+      }
     } finally {
-      setRunning(false);
+      setBotRunning(bot.id, false);
+      if (useBotUiStore.getState().selectedBotId === bot.id) setRunning(false);
     }
   };
 
   const stop = async () => {
-    if (!connectionId) return;
-    await acpCancel(connectionId, sessionId).catch(() => {});
+    const connection = botConnection ?? connectionId;
+    if (!connection) return;
+    await acpCancel(connection, botSession ?? null).catch(() => {});
+    setBotRunning(bot.id, false);
     setRunning(false);
   };
 

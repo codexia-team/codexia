@@ -47,15 +47,34 @@ function ToolContent({ item }: { item: AcpToolContent }) {
 }
 
 /**
+ * The shell command a tool call runs, when it has one. Agents name the field
+ * differently (`command`, `cmd`) and some pass argv rather than a string.
+ */
+function commandOf(rawInput: unknown): string | null {
+  if (!rawInput || typeof rawInput !== 'object') return null;
+  const raw = rawInput as Record<string, unknown>;
+  const value = raw.command ?? raw.cmd;
+  if (typeof value === 'string') return value.trim() || null;
+  if (Array.isArray(value))
+    return value.filter((part) => typeof part === 'string').join(' ') || null;
+  return null;
+}
+
+/**
  * One ACP tool call: a title + status row that expands into whatever the agent
  * attached — diffs, command output, or the raw input when there is no content.
  */
 export function AcpToolCall({ entry }: { entry: ToolEntry }) {
   const [open, setOpen] = useState(false);
   const content = entry.content ?? [];
+  const command = commandOf(entry.rawInput);
+  // The command is what a shell call is about, so it stays visible even once
+  // output arrives; the raw JSON is only the fallback for calls with neither.
   const rawInput =
-    content.length === 0 && entry.rawInput ? JSON.stringify(entry.rawInput, null, 2) : null;
-  const expandable = content.length > 0 || rawInput !== null;
+    content.length === 0 && !command && entry.rawInput
+      ? JSON.stringify(entry.rawInput, null, 2)
+      : null;
+  const expandable = content.length > 0 || rawInput !== null || command !== null;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="rounded-md border">
@@ -82,6 +101,11 @@ export function AcpToolCall({ entry }: { entry: ToolEntry }) {
       </CollapsibleTrigger>
 
       <CollapsibleContent className="space-y-2 border-t px-2 py-2">
+        {command && (
+          <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-muted/50 p-2 font-mono text-[11px]">
+            $ {command}
+          </pre>
+        )}
         {content.map((item, i) => (
           <ToolContent
             // biome-ignore lint/suspicious/noArrayIndexKey: append-only content stream, no stable id

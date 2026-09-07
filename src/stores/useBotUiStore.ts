@@ -21,6 +21,13 @@ interface BotUiStore {
   connectionByBot: Record<string, string>;
   setBotConnection: (botId: string, connectionId: string) => void;
   clearBotConnection: (botId: string) => void;
+  /**
+   * Which bots have a turn in flight. The ACP store's `running` is a single
+   * flag for the one visible conversation, so it cannot answer this while the
+   * user is looking at another bot.
+   */
+  runningByBot: Record<string, boolean>;
+  setBotRunning: (botId: string, running: boolean) => void;
   /** The ACP session currently open for each bot, so a return restores it. */
   sessionByBot: Record<string, string>;
   setBotSession: (botId: string, sessionId: string) => void;
@@ -64,6 +71,9 @@ export const useBotUiStore = create<BotUiStore>((set) => ({
       const { [botId]: _removed, ...connectionByBot } = state.connectionByBot;
       return { connectionByBot };
     }),
+  runningByBot: {},
+  setBotRunning: (botId, running) =>
+    set((state) => ({ runningByBot: { ...state.runningByBot, [botId]: running } })),
   sessionByBot: {},
   setBotSession: (botId, sessionId) =>
     set((state) => ({ sessionByBot: { ...state.sessionByBot, [botId]: sessionId } })),
