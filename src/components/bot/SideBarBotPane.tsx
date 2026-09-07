@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus, SquarePen } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { useLayoutStore } from '@/stores';
 import { useBotUiStore } from '@/stores/useBotUiStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { BotAvatar } from './BotAvatar';
+import { BotSessionList } from './BotSessionList';
 import { BotSettingsDialog } from './BotSettingsDialog';
 import { defaultLook, newBotId } from './botDefaults';
 import { useBotSession } from './useBotSession';
@@ -31,7 +32,7 @@ export function SideBarBotPane() {
   const { bots, setBots, upsertBot, selectedBotId, connectionByBot } = useBotUiStore();
   const setView = useLayoutStore((s) => s.setView);
   const cwd = useWorkspaceStore((s) => s.cwd);
-  const { open, openBlank } = useBotSession();
+  const { open, openBlank, startNew } = useBotSession();
   const [newBot, setNewBot] = useState<Bot | null>(null);
 
   useEffect(() => {
@@ -84,32 +85,52 @@ export function SideBarBotPane() {
         )}
 
         {bots.map((bot) => (
-          <button
-            type="button"
-            key={bot.id}
-            onClick={() => select(bot)}
-            className={`flex w-full items-center gap-2 px-2 py-2 text-left hover:bg-accent/50 ${
-              selectedBotId === bot.id ? 'bg-accent' : ''
-            }`}
-          >
-            <BotAvatar bot={bot} running={Boolean(connectionByBot[bot.id])} />
-            <span className="min-w-0 flex-1">
-              <span className="flex items-baseline gap-2">
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{bot.name}</span>
-                <span className="shrink-0 text-[10px] text-muted-foreground">
+          <div key={bot.id}>
+            <div
+              className={`group flex w-full items-center gap-2 px-2 py-2 hover:bg-accent/50 ${
+                selectedBotId === bot.id ? 'bg-accent' : ''
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => select(bot)}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              >
+                <BotAvatar bot={bot} running={Boolean(connectionByBot[bot.id])} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{bot.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {bot.title || bot.model || bot.cwd || 'keke'}
+                  </span>
+                </span>
+                {bot.unreadCount > 0 && (
+                  <span className="shrink-0 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
+                    {bot.unreadCount}
+                  </span>
+                )}
+              </button>
+              <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+                <span className="text-[10px] text-muted-foreground group-hover:hidden">
                   {since(bot.updatedAt)}
                 </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  title="New session"
+                  className="hidden group-hover:inline-flex"
+                  onClick={() => {
+                    setView('bot');
+                    void startNew(bot);
+                  }}
+                >
+                  <SquarePen />
+                </Button>
               </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                {bot.title || bot.model || bot.cwd || 'keke'}
-              </span>
-            </span>
-            {bot.unreadCount > 0 && (
-              <span className="shrink-0 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
-                {bot.unreadCount}
-              </span>
-            )}
-          </button>
+            </div>
+
+            {selectedBotId === bot.id && <BotSessionList bot={bot} />}
+          </div>
         ))}
       </div>
 
