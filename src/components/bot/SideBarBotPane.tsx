@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
@@ -8,6 +8,7 @@ import { useLayoutStore } from '@/stores';
 import { useBotUiStore } from '@/stores/useBotUiStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { BotAvatar } from './BotAvatar';
+import { BotSettingsDialog } from './BotSettingsDialog';
 import { defaultLook, newBotId } from './botDefaults';
 import { useBotSession } from './useBotSession';
 
@@ -31,6 +32,7 @@ export function SideBarBotPane() {
   const setView = useLayoutStore((s) => s.setView);
   const cwd = useWorkspaceStore((s) => s.cwd);
   const { open } = useBotSession();
+  const [newBot, setNewBot] = useState<Bot | null>(null);
 
   useEffect(() => {
     listBots()
@@ -51,6 +53,7 @@ export function SideBarBotPane() {
       upsertBot(bot);
       useBotUiStore.getState().setSelectedBotId(bot.id);
       setView('bot');
+      setNewBot(bot);
     } catch (e) {
       toast({ title: 'Could not create bot', description: String(e), variant: 'destructive' });
     }
@@ -109,6 +112,16 @@ export function SideBarBotPane() {
           </button>
         ))}
       </div>
+
+      {newBot && (
+        <BotSettingsDialog
+          bot={newBot}
+          open={Boolean(newBot)}
+          onOpenChange={(open) => {
+            if (!open) setNewBot(null);
+          }}
+        />
+      )}
     </div>
   );
 }
