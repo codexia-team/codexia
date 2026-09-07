@@ -23,7 +23,7 @@ export function BotSessionList({ bot }: { bot: Bot }) {
   }, [bot.id]);
 
   useEffect(() => {
-    void refresh();
+    refresh();
   }, [refresh]);
 
   const select = async (session: AcpSessionRecord) => {
@@ -33,7 +33,7 @@ export function BotSessionList({ bot }: { bot: Bot }) {
       await open(bot, session);
     } finally {
       setOpening(null);
-      void refresh();
+      refresh();
     }
   };
 
@@ -50,7 +50,9 @@ export function BotSessionList({ bot }: { bot: Bot }) {
           type="button"
           key={session.sessionId}
           disabled={opening !== null}
-          onClick={() => void select(session)}
+          onClick={() => {
+            select(session);
+          }}
           className={`flex min-w-0 w-full shrink-0 items-baseline gap-1.5 rounded-md px-2 py-1 text-left text-xs transition-colors disabled:opacity-60 ${
             session.sessionId === activeSessionId
               ? 'bg-accent font-medium'
