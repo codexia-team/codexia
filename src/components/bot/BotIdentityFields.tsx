@@ -1,3 +1,6 @@
+import { open } from '@tauri-apps/plugin-dialog';
+import { FolderOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BOT_AVATARS, BOT_COLORS } from './botDefaults';
@@ -28,6 +31,16 @@ export function BotIdentityFields({
   cwd,
   onCwdChange,
 }: BotIdentityFieldsProps) {
+  const pickWorkspace = async () => {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      defaultPath: cwd || undefined,
+    });
+    if (!selected || Array.isArray(selected)) return;
+    onCwdChange(selected);
+  };
+
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
@@ -80,12 +93,17 @@ export function BotIdentityFields({
 
       <div className="space-y-1">
         <Label htmlFor="bot-cwd">Workspace</Label>
-        <Input
-          id="bot-cwd"
-          value={cwd}
-          placeholder="/path/to/project"
-          onChange={(e) => onCwdChange(e.target.value)}
-        />
+        <div className="flex gap-2">
+          <Input
+            id="bot-cwd"
+            value={cwd}
+            placeholder="/path/to/project"
+            onChange={(e) => onCwdChange(e.target.value)}
+          />
+          <Button type="button" variant="outline" size="icon" onClick={pickWorkspace}>
+            <FolderOpen className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </>
   );
