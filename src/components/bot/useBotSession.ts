@@ -4,6 +4,7 @@ import { acpGetSession, acpSetConfigOption, acpStart } from '@/services/apiAdapt
 import type { Bot } from '@/services/apiAdapt/bots';
 import { listBotSessions } from '@/services/apiAdapt/bots';
 import { useAcpStore } from '@/stores/useAcpStore';
+import { captureBotOptions } from '@/stores/useBotOptionsStore';
 import { useBotUiStore } from '@/stores/useBotUiStore';
 import { applyAcpUpdate } from '../acp/applyUpdate';
 import { loadAcpAgents } from '../acp/useAcpAgents';
@@ -89,6 +90,9 @@ export function useBotSession() {
           canLoadSession: res.initialize.agentCapabilities?.loadSession === true,
         });
         store.applySession(res.session);
+        // Remember what keke offers, so a bot that has never run can still be
+        // configured from a list rather than typed-in provider/model strings.
+        captureBotOptions(res.initialize, res.session);
         ui.setBotConnection(bot.id, res.connectionId);
 
         if (res.sessionError || !res.sessionId) {
