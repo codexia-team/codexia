@@ -40,6 +40,10 @@ export type AcpPermissionOption = { optionId: string; name: string; kind?: strin
 export type AcpPermissionRequest = {
   requestId: string;
   title: string;
+  /** The tool call's category (`read`, `edit`, `execute`, ...) when the agent
+   * reported one. Coarse on purpose: it is the unit a standing "always allow"
+   * can be about, where a per-call title never repeats. */
+  toolKind?: string;
   options: AcpPermissionOption[];
 };
 
@@ -62,6 +66,8 @@ interface AcpStore {
   connecting: boolean;
   running: boolean;
   entries: AcpEntry[];
+  /** Set by `sealChunk`: the next chunk starts a new entry. */
+  chunkSealed: boolean;
   permission: AcpPermissionRequest | null;
 
   /** Session controls advertised by the agent. */
@@ -116,6 +122,12 @@ interface AcpStore {
   setEntries: (entries: AcpEntry[]) => void;
   /** Append to the last entry when it has the same streaming role, else push. */
   appendChunk: (role: 'agent' | 'thought', text: string) => void;
+  /**
+   * Keep the next chunk from merging into the last entry. Used at the seam
+   * between two replayed transcripts, whose chunks are separate turns even
+   * though they share a role.
+   */
+  sealChunk: () => void;
   /** Merge a `tool_call` / `tool_call_update`: absent fields keep their value. */
   upsertToolCall: (tool: {
     toolCallId: string;
@@ -144,6 +156,7 @@ const cleared = {
   connecting: false,
   running: false,
   entries: [],
+  chunkSealed: false,
   permission: null,
   modes: null,
   models: null,
@@ -165,6 +178,7 @@ export const useAcpStore = create<AcpStore>((set) => ({
   connecting: false,
   running: false,
   entries: [],
+  chunkSealed: false,
   permission: null,
   modes: null,
   models: null,
@@ -225,16 +239,18 @@ export const useAcpStore = create<AcpStore>((set) => ({
   setRunning: (running) => set({ running }),
   setPermission: (permission) => set({ permission }),
   addEntry: (entry) => set((s) => ({ entries: [...s.entries, entry] })),
-  setEntries: (entries) => set({ entries }),
+  setEntries: (entries) => set({ entries, chunkSealed: false }),
+
+  sealChunk: () => set({ chunkSealed: true }),
 
   appendChunk: (role, text) =>
     set((s) => {
       const last = s.entries[s.entries.length - 1];
-      if (last && last.role === role) {
+      if (last && last.role === role && !s.chunkSealed) {
         const updated = { ...last, text: last.text + text };
-        return { entries: [...s.entries.slice(0, -1), updated] };
+        return { entries: [...s.entries.slice(0, -1), updated], chunkSealed: false };
       }
-      return { entries: [...s.entries, { id: newId(), role, text }] };
+      return { entries: [...s.entries, { id: newId(), role, text }], chunkSealed: false };
     }),
 
   upsertToolCall: ({ toolCallId, title, status, kind, content, locations, rawInput, rawOutput }) =>

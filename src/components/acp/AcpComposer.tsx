@@ -5,6 +5,7 @@ import { toast } from '@/components/ui/use-toast';
 import { acpCancel, acpPrompt, acpStart } from '@/services/apiAdapt/acp';
 import { useWorkspaceStore } from '@/stores';
 import { useAcpStore } from '@/stores/useAcpStore';
+import { captureBotOptions } from '@/stores/useBotOptionsStore';
 import { AcpModelMenu } from './AcpModelMenu';
 import { AcpSessionControls } from './AcpSessionControls';
 import { useAcpAgents } from './useAcpAgents';
@@ -24,7 +25,7 @@ export function AcpComposer() {
     restartNonce,
   } = useAcpStore();
   const cwd = useWorkspaceStore((s) => s.cwd);
-  const agents = useAcpAgents();
+  const agents = useAcpAgents() ?? [];
   const [text, setText] = useState('');
   // Agent we already tried to auto-connect, so a failed start does not spin in
   // a retry loop. Cleared on an explicit restart.
@@ -52,6 +53,9 @@ export function AcpComposer() {
         canLoadSession: res.initialize.agentCapabilities?.loadSession === true,
       });
       applySession(res.session);
+      // keke's own catalogue also configures bots, which are keke processes —
+      // so a bot can be set up from this session without opening its chat.
+      if (agentId === 'keke') captureBotOptions(res.initialize, res.session);
       if (res.sessionError) {
         addEntry({ id: `start-${Date.now()}`, role: 'error', text: res.sessionError });
         return null;

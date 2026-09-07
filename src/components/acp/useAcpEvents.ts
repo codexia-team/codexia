@@ -59,6 +59,7 @@ export function useAcpEvents(connectionId: string | null) {
         store.setPermission({
           requestId: payload.requestId!,
           title,
+          toolKind: payload.toolCall?.kind as string | undefined,
           options: payload.options ?? [],
         });
         return;

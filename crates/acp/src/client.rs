@@ -25,6 +25,10 @@ pub struct AcpClient {
     pub agent_id: String,
     /// Display name of the agent, stored alongside persisted sessions.
     pub agent_name: String,
+    /// The bot this process was started for, when it was started from the Bot
+    /// tab. Every session it opens is tagged with it, which is what keeps a
+    /// bot's conversations out of the per-project session lists.
+    pub bot_id: Option<String>,
     /// Sessions opened on this connection, keyed by ACP session id. One agent
     /// process can host several sessions at once.
     sessions: Arc<DashMap<String, ()>>,
@@ -50,6 +54,7 @@ impl AcpClient {
         connection_id: String,
         agent: &AcpAgentDef,
         cwd: Option<&str>,
+        bot_id: Option<String>,
         sink: Arc<dyn EventSink>,
     ) -> Result<(Arc<Self>, Value), String> {
         let mut cmd = Command::new(&agent.command);
@@ -74,6 +79,7 @@ impl AcpClient {
             connection_id: connection_id.clone(),
             agent_id: agent.id.clone(),
             agent_name: agent.name.clone(),
+            bot_id,
             sessions: Arc::new(DashMap::new()),
             last_session: Mutex::new(None),
             replaying: Arc::new(DashMap::new()),
@@ -159,6 +165,7 @@ impl AcpClient {
             &self.agent_id,
             Some(&self.agent_name),
             cwd,
+            self.bot_id.as_deref(),
         ) {
             log::warn!("acp: failed to record session: {e}");
         }
@@ -186,6 +193,7 @@ impl AcpClient {
             &self.agent_id,
             Some(&self.agent_name),
             cwd,
+            self.bot_id.as_deref(),
         ) {
             log::warn!("acp: failed to record session: {e}");
         }

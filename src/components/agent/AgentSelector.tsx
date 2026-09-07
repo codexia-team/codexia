@@ -31,7 +31,7 @@ export function AgentSelector() {
   const { selectedAgent, setSelectedAgent } = useAgentSettingsStore();
   const { setActiveSidebarTab } = useLayoutStore();
   const { active, agentId, connectionId, setActive, setAgentId, reset } = useAcpStore();
-  const acpAgents = useAcpAgents();
+  const acpAgents = useAcpAgents() ?? [];
   const [open, setOpen] = useState(false);
 
   const current = active

@@ -25,6 +25,13 @@ pub struct AcpAgentDef {
     /// Whether `command` resolves on PATH. Only filled in by `list_agents`.
     #[serde(default)]
     pub available: bool,
+    /// Whether the resolved launcher is the agent's own installed binary
+    /// rather than the `npx` download fallback. `available` alone says only
+    /// that *something* can be spawned: with Node present every npm-published
+    /// agent is "available", which is not what a caller asking "is this agent
+    /// installed?" means.
+    #[serde(default)]
+    pub local: bool,
 }
 
 /// One way to launch an agent. Presets list several, local binary first and
@@ -154,6 +161,7 @@ impl Preset {
             .find(|launcher| which::which(launcher.command).is_ok());
         let available = found.is_some();
         let launcher = found.unwrap_or_else(|| self.launchers.last().expect("preset launcher"));
+        let local = available && launcher.command != "npx";
 
         AcpAgentDef {
             id: self.id.to_string(),
@@ -166,6 +174,7 @@ impl Preset {
                 .map(|(k, v)| (k.to_string(), v.to_string()))
                 .collect(),
             available,
+            local,
         }
     }
 }
@@ -217,6 +226,7 @@ fn user_agents() -> Vec<AcpAgentDef> {
                 id: entry.id.unwrap_or_else(|| slug(&name)),
                 name,
                 available: which::which(&entry.command).is_ok(),
+                local: which::which(&entry.command).is_ok(),
                 command: entry.command,
                 args: entry.args,
                 env: entry.env,
@@ -244,4 +254,77 @@ pub fn list_agents() -> Vec<AcpAgentDef> {
 
 pub fn find_preset(id: &str) -> Option<AcpAgentDef> {
     list_agents().into_iter().find(|a| a.id == id)
+}
+
+/// The npm package a preset would otherwise download on every run, read off
+/// its `npx` launcher so there is only one place naming a package. `None` for
+/// an agent that has no npm distribution — those can only be installed by hand.
+fn npm_package(id: &str) -> Option<&'static str> {
+    let preset = PRESETS.iter().find(|p| p.id == id)?;
+    let npx = preset.launchers.iter().find(|l| l.command == "npx")?;
+    let package = npx.args.iter().find(|a| !a.starts_with('-'))?;
+    Some(package)
+}
+
+/// Install a preset globally with npm, so it resolves on PATH from then on.
+///
+/// The `npx` fallback launcher means an agent can run without this, but only
+/// by re-downloading the package on every spawn — and only when Node is
+/// installed at all. This is the one-off that makes the agent local.
+pub fn install_preset(id: &str) -> Result<AcpAgentDef, String> {
+    let package = npm_package(id).ok_or_else(|| format!("{id} has no npm package to install"))?;
+    let npm = which::which("npm")
+        .map_err(|_| "npm was not found on PATH — install Node.js first.".to_string())?;
+
+    log::info!("acp: installing {id} via npm install -g {package}");
+    let output = std::process::Command::new(npm)
+        .args(["install", "-g", package])
+        .output()
+        .map_err(|e| format!("could not run npm: {e}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let message = stderr.trim();
+        return Err(if message.is_empty() {
+            format!("npm install -g {package} failed")
+        } else {
+            message.to_string()
+        });
+    }
+
+    let def = find_preset(id).ok_or_else(|| format!("{id} is not a known agent"))?;
+    log::info!(
+        "acp: installed {id}: command={} local={} available={}",
+        def.command,
+        def.local,
+        def.available
+    );
+    Ok(def)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn npm_package_comes_from_the_npx_launcher() {
+        assert_eq!(npm_package("keke"), Some("@milisp/keke@latest"));
+        // No npx launcher, so nothing to install for us.
+        assert_eq!(npm_package("kiro"), None);
+        assert_eq!(npm_package("nope"), None);
+    }
+
+    #[test]
+    fn npx_fallback_is_not_a_local_install() {
+        let def = AcpAgentDef {
+            id: "keke".into(),
+            name: "Keke".into(),
+            command: "npx".into(),
+            args: vec![],
+            env: Default::default(),
+            available: true,
+            local: false,
+        };
+        assert!(def.available && !def.local);
+    }
 }

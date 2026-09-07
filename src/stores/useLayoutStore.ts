@@ -17,7 +17,10 @@ export type viewType =
   | 'plugins'
   | 'settings'
   | 'usage'
-  | 'insights';
+  | 'insights'
+  | 'bot';
+
+export type SidebarMode = 'agent' | 'bot';
 
 export type RightPanelTab = 'diff' | 'tasks' | 'todo' | 'terminal' | 'webpreview' | 'files';
 
@@ -38,6 +41,9 @@ interface LayoutStore {
   toggleRightPanelFocused: () => void;
   activeSidebarTab: AgentType;
   setActiveSidebarTab: (tab: AgentType) => void;
+  /** Which half of the sidebar is showing: the agent workspaces, or the bots. */
+  sidebarMode: SidebarMode;
+  setSidebarMode: (mode: SidebarMode) => void;
   activeRightPanelTab: RightPanelTab | null;
   setActiveRightPanelTab: (tab: RightPanelTab) => void;
   // Right panel tabs currently open in the header bar; closable independently of activeRightPanelTab.
@@ -82,6 +88,8 @@ export const useLayoutStore = create<LayoutStore>()(
         set((state) => ({ isRightPanelFocused: !state.isRightPanelFocused })),
       activeSidebarTab: 'codex',
       setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab }),
+      sidebarMode: 'agent',
+      setSidebarMode: (sidebarMode) => set({ sidebarMode }),
       activeRightPanelTab: 'diff',
       setActiveRightPanelTab: (tab) =>
         set((state) => ({
@@ -144,7 +152,7 @@ export const useLayoutStore = create<LayoutStore>()(
     }),
     {
       name: 'layout-storage',
-      version: 6,
+      version: 7,
       partialize: (state) => ({
         isSidebarOpen: state.isSidebarOpen,
         isRightPanelOpen: state.isRightPanelOpen,
@@ -152,6 +160,7 @@ export const useLayoutStore = create<LayoutStore>()(
         view: state.view,
         isRightPanelFocused: state.isRightPanelFocused,
         activeSidebarTab: state.activeSidebarTab,
+        sidebarMode: state.sidebarMode,
         activeRightPanelTab: state.activeRightPanelTab,
         openRightPanelTabs: state.openRightPanelTabs,
         diffWordWrap: state.diffWordWrap,
@@ -175,6 +184,12 @@ export const useLayoutStore = create<LayoutStore>()(
               (tab: string) => (tab === 'note' ? 'todo' : tab)
             );
           }
+        }
+        if (version < 7 && persistedState) {
+          // The Bot tab is new, so a store written before it has no mode and
+          // must land on the sidebar it was last actually showing.
+          persistedState.sidebarMode = 'agent';
+          if (persistedState.view === 'bot') persistedState.view = 'agent';
         }
         return persistedState;
       },

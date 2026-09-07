@@ -1,17 +1,9 @@
-import { BarChart2, Bug, ListFilter, Monitor, Package2, Search, Timer } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { Bug, Monitor, Search } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AgentSwitcher } from '@/components/agent';
-import { useNewThread, useThreadList } from '@/components/codex/hooks';
+import { SideBarBotPane } from '@/components/bot';
 import { DesktopDrawer } from '@/components/pairing/DesktopDrawer';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Sidebar,
   SidebarContent,
@@ -22,77 +14,33 @@ import {
 } from '@/components/ui/sidebar';
 import { useTrafficLightConfig } from '@/hooks';
 import { isPhone } from '@/hooks/runtime';
-import { useCCSessionManager } from '@/hooks/useCCSessionManager';
-import { useLayoutStore } from '@/stores';
-import { useAcpStore } from '@/stores/useAcpStore';
-import { useAgentSettingsStore } from '@/stores/useAgentSettingsStore';
-import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { type SidebarMode, useLayoutStore } from '@/stores';
 import { UpdateIndicator } from '../../features/UpdateIndicator';
-import { NewAgentButton } from '../common/NewAgentButton';
 import { SessionManagerDialog } from '../common/SessionManagerDialog';
-import { SideBarAddProjectButton } from './SideBarAddProjectButton';
-import { SideBarPinnedList } from './SideBarPinnedList';
-import { SideBarAcpTab, SideBarClaudeTab, SideBarCodexTab } from './SideBarTab';
+import { SideBarAgentHeader, SideBarAgentList } from './SideBarAgentPane';
 import { UserInfo } from './UserInfo';
-
-const focusCCInput = () => window.dispatchEvent(new Event('cc-input-focus-request'));
-
-// Shared class for nav buttons (Automations / Marketplace)
-const navBtnBase = 'justify-start gap-2 rounded-md border px-2.5';
-const navBtnActive = 'border-border bg-accent/70 text-accent-foreground';
-const navBtnInactive = 'border-transparent hover:border-border/60';
-const navBtnCls = (active: boolean) => `${navBtnBase} ${active ? navBtnActive : navBtnInactive}`;
 
 export function AppSideBar() {
   const { t } = useTranslation('sidebar');
-  const { cwd, setCwd } = useWorkspaceStore();
-  const { setSelectedAgent, selectedAgent } = useAgentSettingsStore();
-  const acpActive = useAcpStore((s) => s.active);
-  const { setView, view, activeSidebarTab, setActiveSidebarTab } = useLayoutStore();
+  const modes: Array<{ id: SidebarMode; label: string }> = [
+    { id: 'agent', label: t('agent') },
+    { id: 'bot', label: t('bot') },
+  ];
+  const { view, setView, activeSidebarTab, sidebarMode, setSidebarMode } = useLayoutStore();
   const { open: isSidebarOpen } = useSidebar();
   const { isMacos } = useTrafficLightConfig(isSidebarOpen);
-  const { sortKey, setSortKey } = useThreadList({
-    enabled: isSidebarOpen && selectedAgent === 'codex',
-  });
-  const { handleNewThread } = useNewThread();
-  const { handleNewSession } = useCCSessionManager();
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false);
   // Only a phone drives a remote machine; a desktop is its own backend and has
   // nothing to switch between.
   const [desktopDrawerOpen, setDesktopDrawerOpen] = useState(false);
 
-  const currentThreadSortLabel = sortKey === 'created_at' ? 'Created' : 'Updated';
-
-  const handleCreateNewThreadForProject = useCallback(
-    (project: string) => {
-      if (project !== cwd) setCwd(project);
-      void handleNewThread();
-    },
-    [cwd, handleNewThread, setCwd]
-  );
-
-  const handleStartNewAcpSessionForProject = useCallback(
-    (directory: string) => {
-      setView('agent');
-      setCwd(directory);
-      // `restart` tears down the connection and asks the composer to reconnect
-      // in the new workspace.
-      useAcpStore.getState().restart();
-    },
-    [setCwd, setView]
-  );
-
-  const handleStartNewCcSessionForProject = useCallback(
-    async (directory: string) => {
-      setSelectedAgent('cc');
-      setActiveSidebarTab('cc');
-      setView('agent');
-      setCwd(directory);
-      await handleNewSession();
-      focusCCInput();
-    },
-    [handleNewSession, setActiveSidebarTab, setCwd, setSelectedAgent, setView]
-  );
+  const selectMode = (mode: SidebarMode) => {
+    setSidebarMode(mode);
+    // The Bot tab is a conversation, not a workspace: switching to it leaves
+    // the agent views behind rather than showing an empty one beside them.
+    if (mode === 'bot') setView('bot');
+    else if (view === 'bot') setView('agent');
+  };
 
   return (
     <>
@@ -126,86 +74,29 @@ export function AppSideBar() {
             )}
           </div>
 
-          {/* Nav actions */}
-          <div className="flex flex-col">
-            <NewAgentButton showLabel />
-            <Button
-              variant="ghost"
-              size="sm"
-              className={navBtnCls(view === 'plugins')}
-              onClick={() => setView('plugins')}
-            >
-              <Package2 className="h-4 w-4" />
-              {t('plugins')}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={navBtnCls(view === 'automations')}
-              onClick={() => setView('automations')}
-            >
-              <Timer className="h-4 w-4" />
-              {t('automations')}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={navBtnCls(view === 'insights')}
-              onClick={() => setView('insights')}
-            >
-              <BarChart2 className="h-4 w-4" />
-              {t('insights')}
-            </Button>
-
-            <SideBarPinnedList />
+          {/* Agent / Bot */}
+          <div className="flex items-center gap-1 rounded-md bg-muted/50 p-0.5">
+            {modes.map((mode) => (
+              <button
+                type="button"
+                key={mode.id}
+                onClick={() => selectMode(mode.id)}
+                className={`flex-1 rounded-[5px] px-2 py-1 text-xs font-medium transition-colors ${
+                  sidebarMode === mode.id
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {mode.label}
+              </button>
+            ))}
           </div>
 
-          {/* Tab switcher row */}
-          <span className="flex justify-between">
-            <AgentSwitcher className="flex gap-2" />
-
-            <span className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    title={`Filter threads (current: ${currentThreadSortLabel})`}
-                  >
-                    <ListFilter className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuRadioGroup
-                    value={sortKey}
-                    onValueChange={(v) => setSortKey(v as 'created_at' | 'updated_at')}
-                  >
-                    <DropdownMenuRadioItem value="created_at">
-                      Sort by Created
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="updated_at">
-                      Sort by Updated
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <SideBarAddProjectButton />
-            </span>
-          </span>
+          {sidebarMode === 'agent' && <SideBarAgentHeader />}
         </SidebarHeader>
 
-        {/* Thread list — selectedAgent is single source of truth */}
         <SidebarContent className="min-w-0 max-w-full overflow-x-hidden gap-0 px-0">
-          {acpActive ? (
-            <SideBarAcpTab onStartNewSession={handleStartNewAcpSessionForProject} />
-          ) : selectedAgent === 'codex' ? (
-            <SideBarCodexTab onCreateNewThread={handleCreateNewThreadForProject} />
-          ) : (
-            <SideBarClaudeTab onStartNewSession={handleStartNewCcSessionForProject} />
-          )}
+          {sidebarMode === 'agent' ? <SideBarAgentList /> : <SideBarBotPane />}
         </SidebarContent>
 
         <SidebarFooter className="flex-row items-center p-0 min-w-0 max-w-full overflow-x-hidden">

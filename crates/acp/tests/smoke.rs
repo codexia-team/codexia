@@ -20,7 +20,7 @@ impl EventSink for PrintSink {
 async fn gemini_prompt_roundtrip() {
     let state = AcpState::new(Arc::new(PrintSink));
     let cwd = std::env::temp_dir().display().to_string();
-    let started = state.start("gemini", &cwd, None).await.expect("start");
+    let started = state.start("gemini", &cwd, None, None).await.expect("start");
     println!("initialize: {}", started.initialize);
     assert!(
         started.session_id.is_some(),
@@ -66,7 +66,7 @@ async fn gemini_prompt_roundtrip() {
 async fn grok_reports_session_config() {
     let state = AcpState::new(Arc::new(PrintSink));
     let cwd = std::env::temp_dir().display().to_string();
-    let started = state.start("grok", &cwd, None).await.expect("start");
+    let started = state.start("grok", &cwd, None, None).await.expect("start");
     let session = started.session.expect("session/new result");
     println!("models: {}", session.get("models").unwrap_or(&Value::Null));
     println!("modes: {}", session.get("modes").unwrap_or(&Value::Null));

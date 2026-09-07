@@ -7,7 +7,7 @@ pub mod agents;
 pub mod client;
 pub mod state;
 
-pub use agents::{AcpAgentDef, find_preset, list_agents};
+pub use agents::{AcpAgentDef, find_preset, install_preset, list_agents};
 /// Persisted session list and transcripts, stored by the client as it runs.
 pub use codexia_db::acp_sessions::{
     AcpSessionRecord, delete_session, get_updates, list_sessions,

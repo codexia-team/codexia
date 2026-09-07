@@ -11,6 +11,10 @@ pub(crate) struct AcpStartParams {
     pub cwd: String,
     #[serde(default)]
     pub custom: Option<AcpAgentDef>,
+    /// Set when the Bot tab starts a bot's own agent process, so every session
+    /// the connection opens is filed under that bot.
+    #[serde(default)]
+    pub bot_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -103,13 +107,30 @@ pub(crate) async fn api_acp_list_agents() -> Json<Vec<AcpAgentDef>> {
     Json(codexia_acp::list_agents())
 }
 
+#[derive(Deserialize)]
+pub(crate) struct AcpInstallAgentParams {
+    pub agent_id: String,
+}
+
+/// Install an agent's npm package globally, and hand back the re-resolved
+/// def so the caller can see it is now available without a restart.
+pub(crate) async fn api_acp_install_agent(
+    Json(params): Json<AcpInstallAgentParams>,
+) -> Result<Json<AcpAgentDef>, ErrorResponse> {
+    tokio::task::spawn_blocking(move || codexia_acp::install_preset(&params.agent_id))
+        .await
+        .map_err(|e| err(e.to_string()))?
+        .map(Json)
+        .map_err(err)
+}
+
 pub(crate) async fn api_acp_start(
     AxumState(state): AxumState<WebServerState>,
     Json(params): Json<AcpStartParams>,
 ) -> Result<Json<AcpStartResult>, ErrorResponse> {
     state
         .acp_state
-        .start(&params.agent_id, &params.cwd, params.custom)
+        .start(&params.agent_id, &params.cwd, params.custom, params.bot_id)
         .await
         .map(Json)
         .map_err(err)

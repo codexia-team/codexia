@@ -3,6 +3,7 @@ import { isDesktopTauri } from './shared';
 
 export * from './acp';
 export * from './automation';
+export * from './bots';
 
 export * from './cc';
 export * from './codex';

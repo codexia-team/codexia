@@ -11,10 +11,11 @@ use tower_http::services::{ServeDir, ServeFile};
 use super::{
     handlers::{
         api_account_rate_limits, api_allow_sleep, api_archive_thread, api_unarchive_thread, api_canonicalize_path,
-        api_acp_list_agents, api_acp_start, api_acp_prompt, api_acp_cancel,
+        api_acp_list_agents, api_acp_install_agent, api_acp_start, api_acp_prompt, api_acp_cancel,
         api_acp_authenticate, api_acp_new_session, api_acp_respond_permission, api_acp_stop,
         api_acp_set_mode, api_acp_set_model, api_acp_set_config_option,
         api_acp_load_session, api_acp_list_sessions, api_acp_get_session, api_acp_delete_session,
+        api_list_bots, api_create_bot, api_update_bot, api_delete_bot, api_bot_sessions,
         api_cc_list_projects, api_cc_mcp_add, api_cc_mcp_disable, api_cc_mcp_enable,
         api_cc_mcp_get, api_cc_mcp_list, api_cc_mcp_remove,
         api_cc_connect, api_cc_disconnect, api_cc_get_installed_skills,
@@ -368,6 +369,7 @@ pub fn create_router(state: WebServerState) -> Router {
             post(api_git_has_worktree_changes),
         )
         .route("/api/acp/agents", get(api_acp_list_agents))
+        .route("/api/acp/install-agent", post(api_acp_install_agent))
         .route("/api/acp/start", post(api_acp_start))
         .route("/api/acp/prompt", post(api_acp_prompt))
         .route("/api/acp/cancel", post(api_acp_cancel))
@@ -382,6 +384,11 @@ pub fn create_router(state: WebServerState) -> Router {
         .route("/api/acp/set-config-option", post(api_acp_set_config_option))
         .route("/api/acp/respond-permission", post(api_acp_respond_permission))
         .route("/api/acp/stop", post(api_acp_stop))
+        .route("/api/bots/list", post(api_list_bots))
+        .route("/api/bots/create", post(api_create_bot))
+        .route("/api/bots/update", post(api_update_bot))
+        .route("/api/bots/delete", post(api_delete_bot))
+        .route("/api/bots/sessions", post(api_bot_sessions))
         .route("/api/cc/connect", post(api_cc_connect))
         .route("/api/cc/send-message", post(api_cc_send_message))
         .route("/api/cc/disconnect", post(api_cc_disconnect))

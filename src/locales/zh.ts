@@ -68,6 +68,9 @@ export const zh = {
   },
   sidebar: {
     newChat: '新聊天',
+    agent: '智能体',
+    bot: '机器人',
+    newBot: '新建机器人',
     plugins: '插件',
     automations: '自动化',
     insights: '洞察',

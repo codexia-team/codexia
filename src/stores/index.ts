@@ -7,8 +7,9 @@ export {
 export * from './useAcpStore';
 export * from './useAgentCenterStore';
 export * from './useAgentSettingsStore';
+export * from './useBotUiStore';
 export * from './useEditorStore';
 export * from './useInputStore';
-export { useLayoutStore } from './useLayoutStore';
+export { type SidebarMode, useLayoutStore } from './useLayoutStore';
 export * from './usePluginStore';
 export * from './useWorkspaceStore';

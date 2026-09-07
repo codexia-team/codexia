@@ -1,4 +1,4 @@
-import { getJson, postJson, postNoContent } from './shared';
+import { getJson, postJson, postJsonWithOptions, postNoContent } from './shared';
 
 export type AcpAgentDef = {
   id: string;
@@ -7,6 +7,13 @@ export type AcpAgentDef = {
   args: string[];
   env: Record<string, string>;
   available: boolean;
+  /**
+   * The agent's own binary resolved, rather than the `npx` download fallback.
+   * `available` is true whenever *anything* can be spawned — with Node
+   * installed that is every npm-published agent — so a caller asking "is this
+   * installed?" wants this instead.
+   */
+  local?: boolean;
 };
 
 export type AcpAuthMethod = {
@@ -82,12 +89,34 @@ export async function acpListAgents() {
   return await getJson<AcpAgentDef[]>('/api/acp/agents');
 }
 
-export async function acpStart(agentId: string, cwd: string, custom?: AcpAgentDef) {
-  return await postJson<AcpStartResult>('/api/acp/start', {
-    agent_id: agentId,
-    cwd,
-    custom: custom ?? null,
-  });
+/**
+ * Install an agent's npm package globally. Returns the re-resolved def, whose
+ * `available` says whether it now runs from PATH.
+ */
+export async function acpInstallAgent(agentId: string) {
+  return await postJson<AcpAgentDef>('/api/acp/install-agent', { agent_id: agentId });
+}
+
+/**
+ * `custom` replaces the preset with a definition of its own — how a bot gets
+ * its own process, with its persona in the environment. `botId` files every
+ * session the connection opens under that bot instead of under the project.
+ */
+export async function acpStart(agentId: string, cwd: string, custom?: AcpAgentDef, botId?: string) {
+  // Every caller already turns a rejection into its own UI (a toast, or —
+  // for a bot whose keke can't spawn — an inline install prompt instead of
+  // one); the generic "Request failed" toast this helper would otherwise
+  // show first only duplicates or preempts that.
+  return await postJsonWithOptions<AcpStartResult>(
+    '/api/acp/start',
+    {
+      agent_id: agentId,
+      cwd,
+      custom: custom ?? null,
+      bot_id: botId ?? null,
+    },
+    { suppressToast: true }
+  );
 }
 
 /**
@@ -125,6 +154,7 @@ export async function acpNewSession(connectionId: string, cwd: string) {
 
 /** A persisted session, as listed in the sidebar. */
 export type AcpSessionRecord = {
+  botId?: string | null;
   sessionId: string;
   agentId: string;
   agentTitle: string | null;

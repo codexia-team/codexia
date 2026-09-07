@@ -70,6 +70,9 @@ export const fr = {
   },
   sidebar: {
     newChat: 'Nouvelle discussion',
+    agent: 'Agent',
+    bot: 'Bot',
+    newBot: 'Nouveau bot',
     plugins: 'Plugins',
     automations: 'Automatisations',
     insights: 'Aperçus',
