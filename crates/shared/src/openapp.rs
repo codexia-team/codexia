@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::fs::read_dir;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -68,7 +67,7 @@ fn find_app_bundle_macos(app_name: &str) -> Option<PathBuf> {
         if !root.exists() {
             continue;
         }
-        if let Ok(entries) = read_dir(&root) {
+        if let Ok(entries) = std::fs::read_dir(&root) {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_dir() {
@@ -83,7 +82,7 @@ fn find_app_bundle_macos(app_name: &str) -> Option<PathBuf> {
     if let Ok(home) = std::env::var("HOME") {
         let home_apps = PathBuf::from(home).join("Applications");
         if home_apps.exists() {
-            if let Ok(entries) = read_dir(&home_apps) {
+            if let Ok(entries) = std::fs::read_dir(&home_apps) {
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_dir() {
@@ -126,13 +125,13 @@ fn find_app_windows(app_name: &str) -> Option<PathBuf> {
 
     for root in search_paths {
         if root.exists() {
-            if let Ok(entries) = read_dir(&root) {
+            if let Ok(entries) = std::fs::read_dir(&root) {
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_dir() {
                         let file_name = path.file_name()?.to_string_lossy().to_string();
                         if file_name.to_lowercase().contains(&app_name.to_lowercase()) {
-                            if let Ok(inner) = read_dir(&path) {
+                            if let Ok(inner) = std::fs::read_dir(&path) {
                                 for inner_entry in inner.flatten() {
                                     let inner_path = inner_entry.path();
                                     if inner_path.extension().map_or(false, |ext| ext == "exe") {
