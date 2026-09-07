@@ -37,11 +37,15 @@ export function BotSessionList({ bot }: { bot: Bot }) {
     }
   };
 
-  if (sessions.length < 2) return null;
+  // Sessions without a title were created but never used (e.g. a session
+  // opened on startup that the user never sent a message to). Exclude them so
+  // they never appear as blank "New session" rows in the list.
+  const titled = sessions.filter((s) => s.title !== null);
+  if (titled.length < 2) return null;
 
   return (
     <div className="flex flex-col shrink-0 gap-1 overflow-y-auto border-b px-3 py-1.5 max-h-40">
-      {sessions.map((session) => (
+      {titled.map((session) => (
         <button
           type="button"
           key={session.sessionId}

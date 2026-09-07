@@ -46,6 +46,26 @@ pub fn upsert_session(
         params![session_id, agent_id, agent_title, cwd, bot_id, now],
     )
     .map_err(|e| format!("Failed to upsert ACP session: {}", e))?;
+
+    // Each bot restart produces a new empty session. Clean up the previous
+    // ones now, while we hold a connection, so they never accumulate.
+    // Only bot sessions need this (non-bot sessions have bot_id = NULL).
+    if let Some(bid) = bot_id {
+        conn.execute(
+            "DELETE FROM acp_session_updates WHERE session_id IN (
+                SELECT session_id FROM acp_sessions
+                WHERE bot_id = ?1 AND title IS NULL AND session_id != ?2
+            )",
+            params![bid, session_id],
+        )
+        .map_err(|e| format!("Failed to prune empty bot session updates: {}", e))?;
+        conn.execute(
+            "DELETE FROM acp_sessions WHERE bot_id = ?1 AND title IS NULL AND session_id != ?2",
+            params![bid, session_id],
+        )
+        .map_err(|e| format!("Failed to prune empty bot sessions: {}", e))?;
+    }
+
     Ok(())
 }
 
@@ -125,7 +145,7 @@ pub fn list_bot_sessions(bot_id: &str, limit: usize) -> Result<Vec<AcpSessionRec
         .prepare(
             "SELECT session_id, agent_id, agent_title, cwd, bot_id, title, created_at, updated_at
              FROM acp_sessions
-             WHERE bot_id = ?1
+             WHERE bot_id = ?1 AND title IS NOT NULL
              ORDER BY updated_at DESC
              LIMIT ?2",
         )
