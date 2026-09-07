@@ -67,6 +67,9 @@ interface LayoutStore {
   // Sidebar "Pinned" section collapse state
   isPinnedListOpen: boolean;
   setPinnedListOpen: (open: boolean) => void;
+  // Bot mode tab badge indicator state
+  hasSeenBotTab: boolean;
+  setHasSeenBotTab: (seen: boolean) => void;
 }
 
 export const useLayoutStore = create<LayoutStore>()(
@@ -149,6 +152,8 @@ export const useLayoutStore = create<LayoutStore>()(
         })),
       isPinnedListOpen: true,
       setPinnedListOpen: (open) => set({ isPinnedListOpen: open }),
+      hasSeenBotTab: false,
+      setHasSeenBotTab: (hasSeenBotTab) => set({ hasSeenBotTab }),
     }),
     {
       name: 'layout-storage',
@@ -167,6 +172,7 @@ export const useLayoutStore = create<LayoutStore>()(
         diffSplitMode: state.diffSplitMode,
         expandedProjects: state.expandedProjects,
         isPinnedListOpen: state.isPinnedListOpen,
+        hasSeenBotTab: state.hasSeenBotTab,
       }),
       migrate: (persistedState: any, version: number) => {
         if (version < 5) {

@@ -26,7 +26,15 @@ export function AppSideBar() {
     { id: 'agent', label: t('agent') },
     { id: 'bot', label: t('bot') },
   ];
-  const { view, setView, activeSidebarTab, sidebarMode, setSidebarMode } = useLayoutStore();
+  const {
+    view,
+    setView,
+    activeSidebarTab,
+    sidebarMode,
+    setSidebarMode,
+    hasSeenBotTab,
+    setHasSeenBotTab,
+  } = useLayoutStore();
   const { open: isSidebarOpen } = useSidebar();
   const { isMacos } = useTrafficLightConfig(isSidebarOpen);
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false);
@@ -38,8 +46,12 @@ export function AppSideBar() {
     setSidebarMode(mode);
     // The Bot tab is a conversation, not a workspace: switching to it leaves
     // the agent views behind rather than showing an empty one beside them.
-    if (mode === 'bot') setView('bot');
-    else if (view === 'bot') setView('agent');
+    if (mode === 'bot') {
+      setView('bot');
+      setHasSeenBotTab(true);
+    } else if (view === 'bot') {
+      setView('agent');
+    }
   };
 
   return (
@@ -81,13 +93,19 @@ export function AppSideBar() {
                 type="button"
                 key={mode.id}
                 onClick={() => selectMode(mode.id)}
-                className={`flex-1 rounded-[5px] px-2 py-1 text-xs font-medium transition-colors ${
+                className={`relative inline-flex flex-1 items-center justify-center gap-1.5 rounded-[5px] px-2 py-1 text-xs font-medium transition-colors ${
                   sidebarMode === mode.id
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {mode.label}
+                <span>{mode.label}</span>
+                {mode.id === 'bot' && !hasSeenBotTab && sidebarMode !== 'bot' && (
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
+                  </span>
+                )}
               </button>
             ))}
           </div>
