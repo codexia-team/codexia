@@ -95,6 +95,11 @@ pub(super) struct ErrorResponse {
 
 impl IntoResponse for ErrorResponse {
     fn into_response(self) -> Response {
+        // Every API 500 goes through here, so this is the one place that can
+        // log the reason — without it, a failing handler is invisible in the
+        // log file, only visible as a bare "Internal Server Error" in the
+        // browser console.
+        log::error!("[api] 500: {}", self.error);
         (StatusCode::INTERNAL_SERVER_ERROR, Json(self)).into_response()
     }
 }

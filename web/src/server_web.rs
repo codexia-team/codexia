@@ -203,9 +203,26 @@ where
     );
 
     let app = create_router(state);
-    let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
-        .await
-        .map_err(|e| format!("Failed to bind {host}:{port}: {e}"))?;
+    // A just-exited previous process can hold this port for a moment after
+    // its own process has already disappeared (the OS hasn't released the
+    // socket yet), so a bind failure right after launch isn't necessarily
+    // another instance still running — give it a few seconds to clear before
+    // giving up for good.
+    let addr = format!("{host}:{port}");
+    let mut attempt = 0;
+    let listener = loop {
+        match tokio::net::TcpListener::bind(&addr).await {
+            Ok(listener) => break listener,
+            Err(e) if attempt < 9 => {
+                attempt += 1;
+                log::warn!(
+                    "[remote] bind {addr} failed ({e}), retrying ({attempt}/9)"
+                );
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            }
+            Err(e) => return Err(format!("Failed to bind {addr}: {e}")),
+        }
+    };
 
     // The bound address is what actually matters: binding to a tailnet IP that
     // Tailscale later tears down leaves a socket nothing can connect to.

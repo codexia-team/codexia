@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import {
   type AcpSessionRecord,
+  type AcpSessionResult,
   acpGetSession,
   acpLoadSession,
   acpNewSession,
@@ -170,8 +171,27 @@ export function useBotSession() {
         const canLoadSession = res.initialize.agentCapabilities?.loadSession === true;
         const sessionToRestore =
           requestedSession ?? (await listBotSessions(bot.id).catch(() => []))[0];
-        const restoreStoredSession = sessionToRestore && canLoadSession;
-        const activeSessionId = restoreStoredSession ? sessionToRestore.sessionId : res.sessionId;
+        // The agent may claim `loadSession` support yet still fail to resume a
+        // session from a previous process (e.g. it only kept it in memory) —
+        // fall back to the fresh session rather than let the whole bot fail
+        // to open over a stale session id.
+        let restoreStoredSession = Boolean(sessionToRestore && canLoadSession);
+        let loadedSession: AcpSessionResult | null = null;
+        if (restoreStoredSession && sessionToRestore) {
+          try {
+            loadedSession = await acpLoadSession(
+              res.connectionId,
+              sessionToRestore.sessionId,
+              sessionToRestore.cwd
+            );
+          } catch (e) {
+            console.warn(`bot: ${bot.name} could not resume session, starting fresh`, e);
+            restoreStoredSession = false;
+          }
+        }
+        const activeSessionId = restoreStoredSession
+          ? (sessionToRestore as AcpSessionRecord).sessionId
+          : res.sessionId;
 
         store.setConnection({
           connectionId: res.connectionId,
@@ -180,16 +200,9 @@ export function useBotSession() {
           authMethods: res.initialize.authMethods ?? [],
           canLoadSession,
         });
-        if (restoreStoredSession) {
+        if (restoreStoredSession && sessionToRestore) {
           store.setEntries([]);
-          store.applySession({
-            ...(await acpLoadSession(
-              res.connectionId,
-              sessionToRestore.sessionId,
-              sessionToRestore.cwd
-            )),
-            sessionId: sessionToRestore.sessionId,
-          });
+          store.applySession({ ...loadedSession, sessionId: sessionToRestore.sessionId });
           ui.setBotSession(bot.id, sessionToRestore.sessionId);
         } else {
           store.applySession(res.session);

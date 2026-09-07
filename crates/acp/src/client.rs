@@ -122,7 +122,9 @@ impl AcpClient {
             tokio::spawn(async move {
                 let mut lines = BufReader::new(stderr).lines();
                 while let Ok(Some(line)) = lines.next_line().await {
-                    log::debug!("acp stderr: {line}");
+                    // debug! is silent in a release build's log file, which is
+                    // exactly where an agent's own crash reason is needed most.
+                    log::info!("acp stderr: {line}");
                     client.emit(json!({ "kind": "stderr", "line": line }));
                 }
             });
@@ -406,12 +408,14 @@ impl AcpClient {
                         .get("message")
                         .and_then(Value::as_str)
                         .unwrap_or("agent error");
-                    // Agents put the actionable reason in `data.details`
-                    // behind a generic "Internal error" message.
-                    let details = err
-                        .get("data")
-                        .and_then(|d| d.get("details"))
-                        .and_then(Value::as_str);
+                    // Agents put the actionable reason behind a generic
+                    // "Internal error" message, either as `data.details` or,
+                    // as keke does, as `data` itself being the reason string.
+                    let details = err.get("data").and_then(|d| {
+                        d.get("details")
+                            .and_then(Value::as_str)
+                            .or_else(|| d.as_str())
+                    });
                     Err(match details {
                         Some(details) => format!("{message}: {details}"),
                         None => message.to_string(),

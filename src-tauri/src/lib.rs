@@ -94,6 +94,14 @@ pub fn run() {
                 commands::remote::remote_rotate_token,
             ])
             .setup(|app| {
+                // fix_path_env::fix() ran in main() before the logger existed
+                // to record its result — log the PATH it left behind here,
+                // now that tauri_plugin_log is up, so a spawned agent's
+                // mysterious "Internal error" can be checked against it.
+                log::info!(
+                    "PATH after fix_path_env: {}",
+                    std::env::var("PATH").unwrap_or_default()
+                );
                 let app_handle = app.handle().clone();
 
                 // Fan out to the webview and to the remote server's channel, so
