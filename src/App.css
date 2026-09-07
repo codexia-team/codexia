@@ -456,3 +456,11 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Sonner toast: the close button is absolutely-positioned with
+   transform: translate(-35%, -35%) so it visually overhangs the top-left
+   corner of the toast. Without overflow:visible the button is clipped by the
+   toast's own stacking context / overflow:hidden defaults. */
+[data-sonner-toast] {
+  overflow: visible !important;
+}

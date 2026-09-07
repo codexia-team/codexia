@@ -5,7 +5,12 @@ type Toast = {
   title?: React.ReactNode
   description?: React.ReactNode
   variant?: "default" | "destructive"
+  // Optional unique id to prevent duplicate toasts for the same error.
+  id?: string | number
 }
+
+// Default toast position: top-right (appears in the middle of the screen)
+const DEFAULT_TOAST_POSITION = "top-right" as const
 
 type ToastFn = {
   (props: Toast): { id: string | number; dismiss: () => void }
@@ -15,21 +20,47 @@ type ToastFn = {
   warning: (title: React.ReactNode, options?: Omit<Toast, "title">) => string | number
 }
 
-function createToast({ title, description, variant }: Toast) {
+// Track the most recent toast id to avoid showing duplicate toasts rapidly.
+let lastToastId: string | number | null = null
+
+function createToast({ title, description, variant, id }: Toast) {
+  // If we are showing a toast with the same id, dismiss the previous one to replace it,
+  // preventing duplicate toasts for the same error message.
+  if (id !== undefined && lastToastId !== null) {
+    sonnerToast.dismiss(lastToastId);
+  }
   const fn = variant === "destructive" ? sonnerToast.error : sonnerToast
-  const id = fn(title, { description })
-  return { id, dismiss: () => sonnerToast.dismiss(id) }
+  const toastId = id !== undefined ? id : fn(title, { description, position: DEFAULT_TOAST_POSITION })
+  lastToastId = toastId
+  return { id: toastId, dismiss: () => sonnerToast.dismiss(toastId) }
 }
 
 const toast = Object.assign(createToast, {
-  info: (title: React.ReactNode, options: Omit<Toast, "title"> = {}) =>
-    sonnerToast.info(title, { description: options.description }),
-  success: (title: React.ReactNode, options: Omit<Toast, "title"> = {}) =>
-    sonnerToast.success(title, { description: options.description }),
-  error: (title: React.ReactNode, options: Omit<Toast, "title"> = {}) =>
-    sonnerToast.error(title, { description: options.description }),
-  warning: (title: React.ReactNode, options: Omit<Toast, "title"> = {}) =>
-    sonnerToast.warning(title, { description: options.description }),
+  info: (title: React.ReactNode, options: Omit<Toast, "title"> = {}) => {
+    const { description } = options
+    // Use a simple hash of title+description as id for deduplication.
+    const id = `${title}|${description}`;
+    lastToastId = id // mark as shown
+    return sonnerToast.info(title, { description, position: DEFAULT_TOAST_POSITION })
+  },
+  success: (title: React.ReactNode, options: Omit<Toast, "title"> = {}) => {
+    const { description } = options
+    const id = `${title}|${description}`;
+    lastToastId = id
+    return sonnerToast.success(title, { description, position: DEFAULT_TOAST_POSITION })
+  },
+  error: (title: React.ReactNode, options: Omit<Toast, "title"> = {}) => {
+    const { description } = options
+    const id = `${title}|${description}`;
+    lastToastId = id
+    return sonnerToast.error(title, { description, position: DEFAULT_TOAST_POSITION })
+  },
+  warning: (title: React.ReactNode, options: Omit<Toast, "title"> = {}) => {
+    const { description } = options
+    const id = `${title}|${description}`;
+    lastToastId = id
+    return sonnerToast.warning(title, { description, position: DEFAULT_TOAST_POSITION })
+  },
 }) as ToastFn
 
 function useToast() {

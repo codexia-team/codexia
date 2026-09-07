@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import { Toaster as Sonner } from 'sonner';
+
 import './App.css';
 
 import { useCodexEvents } from '@/components/codex/hooks';
@@ -137,7 +137,6 @@ export default function App() {
             <>
               <AppEntry />
               <Toaster />
-              <Sonner position="top-center" richColors />
             </>
           )}
         </TooltipProvider>

@@ -85,6 +85,7 @@ async function invokeTauriWithToast<T>(
         title: 'Request failed',
         description: message,
         variant: 'destructive',
+        id: message,
       });
     }
     throw new Error(message);
@@ -111,6 +112,7 @@ export async function getJsonWithOptions<T>(
         title: 'Request failed',
         description: message,
         variant: 'destructive',
+        id: message,
       });
     }
     return Promise.reject(new Error(message));
@@ -141,6 +143,7 @@ export async function postJsonWithOptions<T>(
         title: 'Request failed',
         description: message,
         variant: 'destructive',
+        id: message,
       });
     }
     return Promise.reject(new Error(message));
@@ -171,6 +174,7 @@ export async function postNoContentWithOptions(
         title: 'Request failed',
         description: message,
         variant: 'destructive',
+        id: message,
       });
     }
     return Promise.reject(new Error(message));
