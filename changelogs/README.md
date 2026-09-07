@@ -5,7 +5,7 @@ rather than scanning everything.
 
 | Version | Date | Notes |
 | --- | --- | --- |
-| [0.50.0](./0.50.0.md) | 2026-09-07 | WIP |
+| [0.50.0](./0.50.0.md) | 2026-09-07 | Bot tab with Keke chats, toast deduplication, loopback web server for desktop/fs calls |
 | [0.49.0](./0.49.0.md) | 2026-09-07 | File explorer PDF/XLSX/DOCX/PPTX preview, sonner toasts, cargo-watch justfile |
 | [0.48.2](./0.48.2.md) | 2026-08-27 | ACP model/auth controls split into AcpModelMenu, Keke as default ACP preset |
 | [0.48.1](./0.48.1.md) | 2026-08-19 | Localized codex thread items, file change and message layout fixes |
