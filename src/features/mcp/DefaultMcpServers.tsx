@@ -30,6 +30,15 @@ export function DefaultMcpServers({ servers, onServerAdded }: DefaultMcpServersP
         url: 'https://mcp.deepwiki.com/mcp',
       },
     },
+    {
+      name: 'you-search',
+      description:
+        'Web search for coding agents from You.com: current web results and URL content extraction with citations. No account or API key required.',
+      config: {
+        type: 'http' as const,
+        url: 'https://api.you.com/mcp?profile=free',
+      },
+    },
   ];
 
   const handleAddDefaultServer = async (defaultServer: (typeof defaultServers)[0]) => {
