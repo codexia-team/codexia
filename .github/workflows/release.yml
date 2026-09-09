@@ -15,7 +15,75 @@ env:
   TAURI_BUNDLE: all
 
 jobs:
+  sync-changelog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      section: ${{ steps.notes.outputs.section }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Ensure CHANGELOG.md has an entry for this tag
+        id: notes
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SECTION=$(awk -v ver="[$VERSION]" '
+            /^## \[/ { if (found) exit; if (index($0, ver)) { found=1; next } }
+            found { print }
+          ' CHANGELOG.md)
+
+          if [[ -z "${SECTION}" ]]; then
+            echo "No CHANGELOG.md entry for ${VERSION} yet; auto-generating one from commit history."
+            PREV_TAG=$(git tag --sort=-v:refname | grep -vF "${GITHUB_REF_NAME}" | head -1 || true)
+            DATE=$(date +%Y-%m-%d)
+            RANGE="${PREV_TAG:+${PREV_TAG}..}${GITHUB_REF_NAME}"
+            ENTRY=$(mktemp)
+            {
+              echo "## [${VERSION}] - ${DATE}"
+              echo
+              if [[ -n "${PREV_TAG}" ]]; then
+                echo "[Compare with ${PREV_TAG}](https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${GITHUB_REF_NAME})"
+                echo
+              fi
+              git log "${RANGE}" --pretty=format:'- %s (`%h`)' --no-merges
+              echo
+              echo
+            } > "${ENTRY}"
+
+            FIRST_SECTION_LINE=$(grep -n '^## \[' CHANGELOG.md | head -1 | cut -d: -f1)
+            {
+              head -n $((FIRST_SECTION_LINE - 1)) CHANGELOG.md
+              cat "${ENTRY}"
+              tail -n +${FIRST_SECTION_LINE} CHANGELOG.md
+            } > CHANGELOG.md.new
+            mv CHANGELOG.md.new CHANGELOG.md
+            rm -f "${ENTRY}"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "chore: auto-generate changelog entry for ${VERSION}"
+            git push origin HEAD:master
+
+            SECTION=$(awk -v ver="[$VERSION]" '
+              /^## \[/ { if (found) exit; if (index($0, ver)) { found=1; next } }
+              found { print }
+            ' CHANGELOG.md)
+          fi
+
+          {
+            echo 'section<<EOF'
+            echo "${SECTION}"
+            printf '\nEOF\n'
+          } >> "$GITHUB_OUTPUT"
+
   publish-tauri:
+    needs: sync-changelog
     permissions:
       contents: write
       packages: write
@@ -91,16 +159,14 @@ jobs:
       - name: Read Release Notes
         id: notes
         shell: bash
+        env:
+          SECTION: ${{ needs.sync-changelog.outputs.section }}
         run: |
-          if [[ -f ./docs/RELEASE_NOTE.md ]]; then
-            {
-              echo 'body<<EOF'
-              cat ./docs/RELEASE_NOTE.md
-              printf '\nEOF\n'
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "body=🚀 New release v__VERSION__" >> "$GITHUB_OUTPUT"
-          fi
+          {
+            echo 'body<<EOF'
+            echo "$SECTION"
+            printf '\nEOF\n'
+          } >> "$GITHUB_OUTPUT"
 
       - uses: tauri-apps/tauri-action@v0
         env:

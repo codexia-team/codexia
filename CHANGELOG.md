@@ -1,8 +1,10 @@
 # Changelog
 
-> **Archive.** This file covers releases up to 0.36.0 and is no longer updated.
-> Changelogs for 0.42.0 and later live in [changelogs/](./changelogs/), one file
-> per release. Versions 0.37.0 through 0.41.1 have no written changelog.
+> New entries are prepended here again (run `scripts/gen-changelog-entry.sh`
+> before tagging a release). Releases 0.42.0–0.50.1 live in
+> [changelogs/](./changelogs/); versions 0.37.0 through 0.41.1 have no written
+> changelog. The release workflow reads the top `## [version]` section of this
+> file matching the tag being published.
 
 ## [0.36.0] - 26/6/2026
 

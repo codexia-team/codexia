@@ -68,9 +68,14 @@ jobs:
         id: notes
         shell: bash
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SECTION=$(awk -v ver="[$VERSION]" '
+            /^## \[/ { if (found) exit; if (index($0, ver)) { found=1; next } }
+            found { print }
+          ' CHANGELOG.md)
           {
             echo 'body<<RELEASE_NOTE_EOF'
-            cat ./docs/RELEASE_NOTE.md
+            echo "${SECTION:-🚀 Release ${GITHUB_REF_NAME}}"
             printf '\nRELEASE_NOTE_EOF\n'
           } >> "$GITHUB_OUTPUT"
 
@@ -128,9 +133,14 @@ jobs:
         id: notes
         shell: bash
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SECTION=$(awk -v ver="[$VERSION]" '
+            /^## \[/ { if (found) exit; if (index($0, ver)) { found=1; next } }
+            found { print }
+          ' CHANGELOG.md)
           {
             echo 'body<<RELEASE_NOTE_EOF'
-            cat ./docs/RELEASE_NOTE.md
+            echo "${SECTION:-🚀 Release ${GITHUB_REF_NAME}}"
             printf '\nRELEASE_NOTE_EOF\n'
           } >> "$GITHUB_OUTPUT"
 
@@ -185,9 +195,14 @@ jobs:
         id: notes
         shell: bash
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SECTION=$(awk -v ver="[$VERSION]" '
+            /^## \[/ { if (found) exit; if (index($0, ver)) { found=1; next } }
+            found { print }
+          ' CHANGELOG.md)
           {
             echo 'body<<RELEASE_NOTE_EOF'
-            cat ./docs/RELEASE_NOTE.md
+            echo "${SECTION:-🚀 Release ${GITHUB_REF_NAME}}"
             printf '\nRELEASE_NOTE_EOF\n'
           } >> "$GITHUB_OUTPUT"
 

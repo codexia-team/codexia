@@ -1,7 +1,11 @@
 # Changelogs
 
-One file per release, newest first. Read the file for the version you care about
-rather than scanning everything.
+This directory holds a frozen archive of per-release changelogs for 0.42.0
+through 0.50.1. Releases from 0.50.2 onward are recorded back in the root
+[CHANGELOG.md](../CHANGELOG.md) — run `scripts/gen-changelog-entry.sh` before
+tagging to prepend a new entry there. The release workflow reads the
+`## [version]` section at the top of `CHANGELOG.md` matching the tag being
+published.
 
 | Version | Date | Notes |
 | --- | --- | --- |
@@ -21,10 +25,9 @@ rather than scanning everything.
 
 ## Older releases
 
-Releases up to and including 0.36.0 live in the root [CHANGELOG.md](../CHANGELOG.md),
-which is kept as a frozen archive and is no longer updated. Versions 0.37.0
-through 0.41.1 were released without written changelogs; use
-`git log v0.36.0..v0.42.0` for that range.
+Releases up to and including 0.36.0, and 0.50.2 onward, live in the root
+[CHANGELOG.md](../CHANGELOG.md). Versions 0.37.0 through 0.41.1 were released
+without written changelogs; use `git log v0.36.0..v0.42.0` for that range.
 
 ## Conventions
 
@@ -36,5 +39,3 @@ through 0.41.1 were released without written changelogs; use
   Commit hashes go in trailing parentheses.
 - Changes with no user-visible effect (formatting, tooling, dependency bumps)
   are summarized in a single `Internal` paragraph, not itemized.
-- `docs/RELEASE_NOTE.md` holds the prose release note for the *current* release
-  only; the release workflow publishes it as the GitHub release body.

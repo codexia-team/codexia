@@ -52,12 +52,23 @@ jobs:
         id: notes
         shell: bash
         run: |
-          {
-            echo 'body<<EOF'
-            cat docs/RELEASE_NOTE.md
-            echo
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
+          VERSION="${{ inputs.tag_name }}"
+          VERSION="${VERSION#v}"
+          SECTION=$(awk -v ver="[$VERSION]" '
+            /^## \[/ { if (found) exit; if (index($0, ver)) { found=1; next } }
+            found { print }
+          ' CHANGELOG.md)
+
+          if [[ -n "${SECTION}" ]]; then
+            {
+              echo 'body<<EOF'
+              echo "${SECTION}"
+              printf '\nEOF\n'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No CHANGELOG.md section found for version ${VERSION}"
+            echo "body=🚀 Release ${{ inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: tauri-apps/tauri-action@v0
         env:
