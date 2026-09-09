@@ -6,6 +6,15 @@
 > changelog. The release workflow reads the top `## [version]` section of this
 > file matching the tag being published.
 
+## [0.50.2] - 2026-09-09
+
+[Compare with v0.50.1](https://github.com/milisp/codexia/compare/v0.50.1...v0.50.2)
+
+- chore: bump project version to 0.50.2 (`550cd32f`)
+- chore: auto-generate release notes from CHANGELOG.md instead of docs/RELEASE_NOTE.md (`db8b2971`)
+- fix: remove unused read_dir import in openapp (`50ef839e`)
+- feat: add optional you.com search integration (`d165cb70`)
+
 ## [0.36.0] - 26/6/2026
 
 ### 🚀 Features & Improvements
